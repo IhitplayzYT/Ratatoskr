@@ -1,0 +1,12 @@
+/home/ihitplayzyt/Ratatoskr/target/debug/deps/Ratatoskr-6133f4d3ed135e52.d: src/main.rs src/helper.rs src/model/mod.rs src/model/journal.rs src/model/notes.rs src/model/tag.rs src/model/todo.rs src/ratatoskr.rs
+
+/home/ihitplayzyt/Ratatoskr/target/debug/deps/libRatatoskr-6133f4d3ed135e52.rmeta: src/main.rs src/helper.rs src/model/mod.rs src/model/journal.rs src/model/notes.rs src/model/tag.rs src/model/todo.rs src/ratatoskr.rs
+
+src/main.rs:
+src/helper.rs:
+src/model/mod.rs:
+src/model/journal.rs:
+src/model/notes.rs:
+src/model/tag.rs:
+src/model/todo.rs:
+src/ratatoskr.rs:
