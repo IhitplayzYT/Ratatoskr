@@ -1,0 +1,45 @@
+CREATE TABLE Journal_tasks(
+    id CHAR(36) PRIMARY KEY,
+    title TEXT NOT NULL,
+    content LONGTEXT,
+    mood VARCHAR(20),
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    member VARCHAR(255)
+    topic VARCHAR(225)
+);
+
+CREATE TABLE tags(
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) UNIQUE NOT NULL,
+    color VARCHAR(6) NOT NULL
+);
+
+CREATE TABLE Journal_task_tags(
+    task_id CHAR(36),
+    tag_id INT,
+    PRIMARY KEY(task_id,tag_id),
+    FOREIGN KEY(task_id) REFERENCES Journal_tasks(id) ON DELETE CASCADE,
+    FOREIGN KEY(tag_id) REFERENCES tags(id) ON DELETE CASCADE
+);
+
+
+CREATE TABLE Note_tasks(
+    id CHAR(36) PRIMARY KEY,
+    title TEXT NOT NULL,
+    content LONGTEXT,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    pinned BOOLEAN,
+    favorite BOOLEAN
+    member VARCHAR(255)
+    topic VARCHAR(225)
+);
+
+CREATE TABLE Note_task_tags(
+    task_id CHAR(36),
+    tag_id INT,
+    PRIMARY KEY(task_id,tag_id),
+    FOREIGN KEY(task_id) REFERENCES Note_tasks(id) ON DELETE CASCADE,
+    FOREIGN KEY(tag_id) REFERENCES tags(id) ON DELETE CASCADE
+);

@@ -4,6 +4,8 @@ pub mod Journal {
 use uuid::Uuid; 
     use chrono::{DateTime,Utc};
     use crate::model::meta::Meta::{Mood,Tag};
+
+    #[derive(Clone,Debug)]
     pub struct Journal_task {
         pub id: Uuid,
         pub title: String,
@@ -12,14 +14,15 @@ use uuid::Uuid;
         pub created_at: DateTime<Utc>,
         pub updated_at: DateTime<Utc>,
         pub tags: HashSet<Tag>,
-        pub member: Option<String>
+        pub member: Option<String>,
+        pub topic:Option<String>,
     }
 
     impl Journal_task{
-        pub fn new(title:Option<String>,content: Option<String>,mood:Option<Mood>,tags:Option<Vec<Tag>>,part_of: Option<String>) -> Journal_task{
-            Self { id:Uuid::new_v4(), title:if let Some(x) = title{x} else {"Untitled".to_string()}, content: if let Some(x) = content{x} else {"".to_string()}, mood, created_at: Utc::now(), updated_at: Utc::now(), tags: if let Some(x) = tags {x.into_iter().collect::<HashSet<Tag>>()} else {HashSet::new()},member:part_of}
+        pub fn new(title:Option<String>,content: Option<String>,mood:Option<Mood>,tags:Option<Vec<Tag>>,part_of: Option<String>,topic:Option<String>) -> Journal_task{
+            Self { id:Uuid::new_v4(), title:if let Some(x) = title{x} else {"Untitled".to_string()}, content: if let Some(x) = content{x} else {"".to_string()}, mood, created_at: Utc::now(), updated_at: Utc::now(), tags: if let Some(x) = tags {x.into_iter().collect::<HashSet<Tag>>()} else {HashSet::new()},member:part_of,topic}
         }
-        pub fn update(&mut self,title:Option<String>,content: Option<String>,mood: Option<Mood>,tags: Option<Vec<Tag>>,member:Option<String>){
+        pub fn update(&mut self,title:Option<String>,content: Option<String>,mood: Option<Mood>,tags: Option<Vec<Tag>>,member:Option<String>,topic:Option<String>){
             if let Some(x) = title{
                 self.title = x;
             }
@@ -31,6 +34,7 @@ use uuid::Uuid;
             self.add_tags(x);
             }
             self.member = member;
+            self.topic = topic;
             self.updated_at = Utc::now();
         }
 
@@ -43,6 +47,4 @@ use uuid::Uuid;
             self.updated_at = Utc::now();
         }
     }
-
-
 }
