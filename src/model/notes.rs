@@ -4,6 +4,9 @@ pub mod Note{
 use uuid::Uuid;
     use chrono::{DateTime,Utc};
     use crate::model::meta::Meta::Tag; 
+
+
+    #[derive(Clone,Debug)]
 pub struct Note_task {
     pub id: Uuid,
     pub title: String,

@@ -2,7 +2,7 @@ mod helper;
 mod model;
 mod ratatoskr;
 mod db;
-
+mod tree;
 
 use helper::Helper;
 use ratatoskr::Ratatoskr;

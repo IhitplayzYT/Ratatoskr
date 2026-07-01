@@ -1,9 +1,10 @@
 pub mod App{
-use std::{collections::HashSet, fs};
+use std::{collections::HashSet, fs, io};
 
 
 use crate::model::{journal::Journal::Journal_task, meta::Meta::{Tag,MyColor}, notes::Note::Note_task, todo::Todo::Todo_task};
 
+use chrono::TimeZone;
 use serde::{Deserialize,Serialize};
 pub struct Database {
     pub todos: HashSet<Todo_task>,
@@ -21,34 +22,63 @@ pub struct Database {
     //pub search: SearchState,
 //}
 
-//pub struct SearchState {
-    //pub query: String,
-    //pub results: Vec<SearchResult>,
-    //pub cursor: usize,
-//}
 
-//pub struct EditorState {
-    //pub mode: EditorMode,
-    //pub cursor_x: usize,
-    //pub cursor_y: usize,
-    //pub dirty: bool,
-//}
+
+
+
+#[derive(Debug,PartialEq, Eq,Clone, Copy)]
+pub struct EditorState {
+    pub mode: EditorMode,
+    pub cursor_x: usize,
+    pub cursor_y: usize,
+    pub dirty: bool,
+}
+
+#[derive(Debug,PartialEq, Eq,Hash,Clone, Copy)]
+pub enum EditorMode{
+    Normal,
+    Vim
+}
+
 
 #[derive(Serialize,Deserialize,Debug)]
 pub struct Settings {
     pub theme: Theme,
     pub autosave: bool,
+    pub autosave_freq: usize,
     pub vim_mode: bool,
     pub confirm_delete: bool,
     pub date_format: String,
+    pub timezone: String,
+    pub autocomplete: bool
 }
 
 impl Settings{
 
 fn new() -> Settings{
-Self { theme:Default::default(), autosave: false, vim_mode: false, confirm_delete: true, date_format:"dd-mm-yyyy".to_string()}
+Self { theme:Default::default(),autocomplete:false, autosave: false,autosave_freq:usize::MAX, vim_mode: false, confirm_delete: true, date_format:"dd-mm-yyyy".to_string(),timezone:"Utc".to_string()}
 }
 
+fn save(&self) -> io::Result<()>{
+fs::write("settings.json",serde_json::to_string_pretty(self)?)?;
+Ok(())    
+}
+
+fn set(&mut self,other: Settings) {
+self.theme = other.theme;
+self.autosave = other.autosave;
+self.vim_mode = other.vim_mode;
+self.confirm_delete = other.confirm_delete;
+self.date_format = other.date_format;
+self.autosave_freq = other.autosave_freq;
+self.timezone = other.timezone;
+self.autocomplete = other.autocomplete;
+}
+
+fn load(&mut self,path:Option<String>) -> bool{
+self.set(serde_json::from_str::<Settings>(&fs::read_to_string(if let Some(x) = path {x} else{"settings.json".to_string()}).unwrap()).unwrap());
+true
+}
 
 }
 
@@ -85,8 +115,9 @@ Self { primary: if let Some(x) = prim  {x} else{MyColor::Black},
        error:  if let Some(x) = err {x} else{MyColor::BrightRed} }
 }
 
-pub fn Save(&self) {
-    fs::write("theme.json",serde_json::to_string_pretty(self).unwrap());
+pub fn Save(&self) -> io::Result<()>{
+    fs::write("theme.json",serde_json::to_string_pretty(self).unwrap())?;
+    Ok(())
 }
 pub fn set(&mut self,new_t:Theme) {
 self.primary = new_t.primary;

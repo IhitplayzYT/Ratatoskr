@@ -14,8 +14,8 @@ use uuid::Uuid;
         pub created_at: DateTime<Utc>,
         pub updated_at: DateTime<Utc>,
         pub tags: HashSet<Tag>,
-        pub member: Option<String>,
-        pub topic:Option<String>,
+        pub member: Option<String>, // School
+        pub topic:Option<String>,  // education 
     }
 
     impl Journal_task{
