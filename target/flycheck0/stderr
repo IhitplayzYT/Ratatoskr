@@ -2,17 +2,91 @@ warning: only one of `license` or `license-file` is necessary
 `license` should be used if the package license can be expressed with a standard SPDX expression.
 `license-file` should be used if the package uses a non-standard license.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
-   0.060101341s  INFO prepare_target{force=false package_id=Ratatoskr v0.1.0 (/home/ihitplayzyt/Ratatoskr) target="Ratatoskr"}: cargo::core::compiler::fingerprint: stale: changed "/home/ihitplayzyt/Ratatoskr/src/model/meta.rs"
-   0.060113020s  INFO prepare_target{force=false package_id=Ratatoskr v0.1.0 (/home/ihitplayzyt/Ratatoskr) target="Ratatoskr"}: cargo::core::compiler::fingerprint:           (vs) "/home/ihitplayzyt/Ratatoskr/target/debug/.fingerprint/Ratatoskr-c18f0c1593b6cc6a/dep-bin-Ratatoskr"
-   0.060116679s  INFO prepare_target{force=false package_id=Ratatoskr v0.1.0 (/home/ihitplayzyt/Ratatoskr) target="Ratatoskr"}: cargo::core::compiler::fingerprint:                FileTime { seconds: 1782902558, nanos: 853832899 } < FileTime { seconds: 1782905374, nanos: 244145802 }
-   0.060217444s  INFO prepare_target{force=false package_id=Ratatoskr v0.1.0 (/home/ihitplayzyt/Ratatoskr) target="Ratatoskr"}: cargo::core::compiler::fingerprint: fingerprint dirty for Ratatoskr v0.1.0 (/home/ihitplayzyt/Ratatoskr)/Check { test: false }/TargetInner { name: "Ratatoskr", doc: true, ..: with_path("/home/ihitplayzyt/Ratatoskr/src/main.rs", Edition2024) }
-   0.060225658s  INFO prepare_target{force=false package_id=Ratatoskr v0.1.0 (/home/ihitplayzyt/Ratatoskr) target="Ratatoskr"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleItem(ChangedFile { reference: "/home/ihitplayzyt/Ratatoskr/target/debug/.fingerprint/Ratatoskr-c18f0c1593b6cc6a/dep-bin-Ratatoskr", reference_mtime: FileTime { seconds: 1782902558, nanos: 853832899 }, stale: "/home/ihitplayzyt/Ratatoskr/src/model/meta.rs", stale_mtime: FileTime { seconds: 1782905374, nanos: 244145802 } }))
-   0.066077309s  INFO prepare_target{force=false package_id=Ratatoskr v0.1.0 (/home/ihitplayzyt/Ratatoskr) target="Ratatoskr"}: cargo::core::compiler::fingerprint: stale: changed "/home/ihitplayzyt/Ratatoskr/src/model/meta.rs"
-   0.066085585s  INFO prepare_target{force=false package_id=Ratatoskr v0.1.0 (/home/ihitplayzyt/Ratatoskr) target="Ratatoskr"}: cargo::core::compiler::fingerprint:           (vs) "/home/ihitplayzyt/Ratatoskr/target/debug/.fingerprint/Ratatoskr-e7a15c98f8be1880/dep-test-bin-Ratatoskr"
-   0.066088432s  INFO prepare_target{force=false package_id=Ratatoskr v0.1.0 (/home/ihitplayzyt/Ratatoskr) target="Ratatoskr"}: cargo::core::compiler::fingerprint:                FileTime { seconds: 1782902558, nanos: 853832899 } < FileTime { seconds: 1782905374, nanos: 244145802 }
-   0.066117083s  INFO prepare_target{force=false package_id=Ratatoskr v0.1.0 (/home/ihitplayzyt/Ratatoskr) target="Ratatoskr"}: cargo::core::compiler::fingerprint: fingerprint dirty for Ratatoskr v0.1.0 (/home/ihitplayzyt/Ratatoskr)/Check { test: true }/TargetInner { name: "Ratatoskr", doc: true, ..: with_path("/home/ihitplayzyt/Ratatoskr/src/main.rs", Edition2024) }
-   0.066123175s  INFO prepare_target{force=false package_id=Ratatoskr v0.1.0 (/home/ihitplayzyt/Ratatoskr) target="Ratatoskr"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleItem(ChangedFile { reference: "/home/ihitplayzyt/Ratatoskr/target/debug/.fingerprint/Ratatoskr-e7a15c98f8be1880/dep-test-bin-Ratatoskr", reference_mtime: FileTime { seconds: 1782902558, nanos: 853832899 }, stale: "/home/ihitplayzyt/Ratatoskr/src/model/meta.rs", stale_mtime: FileTime { seconds: 1782905374, nanos: 244145802 } }))
-    Checking Ratatoskr v0.1.0 (/home/ihitplayzyt/Ratatoskr)
-error: could not compile `Ratatoskr` (bin "Ratatoskr") due to 10 previous errors; 13 warnings emitted
-warning: build failed, waiting for other jobs to finish...
-error: could not compile `Ratatoskr` (bin "Ratatoskr" test) due to 10 previous errors; 13 warnings emitted
+   0.106303326s  INFO prepare_target{force=false package_id=Ratatoskr v0.1.0 (/home/IhitplayzYT/Ratatoskr) target="Ratatoskr"}: cargo::core::compiler::fingerprint: fingerprint error for Ratatoskr v0.1.0 (/home/IhitplayzYT/Ratatoskr)/Check { test: false }/TargetInner { name: "Ratatoskr", doc: true, ..: with_path("/home/IhitplayzYT/Ratatoskr/src/main.rs", Edition2024) }
+   0.106322899s  INFO prepare_target{force=false package_id=Ratatoskr v0.1.0 (/home/IhitplayzYT/Ratatoskr) target="Ratatoskr"}: cargo::core::compiler::fingerprint:     err: failed to read `/home/IhitplayzYT/Ratatoskr/target/debug/.fingerprint/Ratatoskr-b9c4cd5c57cbdcbe/bin-Ratatoskr`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: cargo_util::paths::read_bytes
+   1: cargo_util::paths::read
+   2: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   3: cargo::core::compiler::fingerprint::prepare_target
+   4: cargo::core::compiler::compile
+   5: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   6: cargo::ops::cargo_compile::compile_ws
+   7: cargo::ops::cargo_compile::compile_with_exec
+   8: cargo::ops::cargo_compile::compile
+   9: cargo::commands::check::exec
+  10: <cargo::cli::Exec>::exec
+  11: cargo::main
+  12: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  13: std::rt::lang_start::<()>::{closure#0}
+  14: core::ops::function::impls::<impl core::ops::function::FnOnce<A> for &F>::call_once
+             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/core/src/ops/function.rs:287:21
+  15: std::panicking::catch_unwind::do_call
+             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/panicking.rs:590:40
+  16: std::panicking::catch_unwind
+             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/panicking.rs:553:19
+  17: std::panic::catch_unwind
+             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/panic.rs:359:14
+  18: std::rt::lang_start_internal::{{closure}}
+             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/rt.rs:175:24
+  19: std::panicking::catch_unwind::do_call
+             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/panicking.rs:590:40
+  20: std::panicking::catch_unwind
+             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/panicking.rs:553:19
+  21: std::panic::catch_unwind
+             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/panic.rs:359:14
+  22: std::rt::lang_start_internal
+             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/rt.rs:171:5
+  23: main
+  24: <unknown>
+  25: __libc_start_main
+  26: <unknown>
+   0.117855680s  INFO prepare_target{force=false package_id=Ratatoskr v0.1.0 (/home/IhitplayzYT/Ratatoskr) target="Ratatoskr"}: cargo::core::compiler::fingerprint: fingerprint error for Ratatoskr v0.1.0 (/home/IhitplayzYT/Ratatoskr)/Check { test: true }/TargetInner { name: "Ratatoskr", doc: true, ..: with_path("/home/IhitplayzYT/Ratatoskr/src/main.rs", Edition2024) }
+   0.117873625s  INFO prepare_target{force=false package_id=Ratatoskr v0.1.0 (/home/IhitplayzYT/Ratatoskr) target="Ratatoskr"}: cargo::core::compiler::fingerprint:     err: failed to read `/home/IhitplayzYT/Ratatoskr/target/debug/.fingerprint/Ratatoskr-1f53605057b816dc/test-bin-Ratatoskr`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: cargo_util::paths::read_bytes
+   1: cargo_util::paths::read
+   2: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   3: cargo::core::compiler::fingerprint::prepare_target
+   4: cargo::core::compiler::compile
+   5: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   6: cargo::ops::cargo_compile::compile_ws
+   7: cargo::ops::cargo_compile::compile_with_exec
+   8: cargo::ops::cargo_compile::compile
+   9: cargo::commands::check::exec
+  10: <cargo::cli::Exec>::exec
+  11: cargo::main
+  12: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  13: std::rt::lang_start::<()>::{closure#0}
+  14: core::ops::function::impls::<impl core::ops::function::FnOnce<A> for &F>::call_once
+             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/core/src/ops/function.rs:287:21
+  15: std::panicking::catch_unwind::do_call
+             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/panicking.rs:590:40
+  16: std::panicking::catch_unwind
+             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/panicking.rs:553:19
+  17: std::panic::catch_unwind
+             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/panic.rs:359:14
+  18: std::rt::lang_start_internal::{{closure}}
+             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/rt.rs:175:24
+  19: std::panicking::catch_unwind::do_call
+             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/panicking.rs:590:40
+  20: std::panicking::catch_unwind
+             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/panicking.rs:553:19
+  21: std::panic::catch_unwind
+             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/panic.rs:359:14
+  22: std::rt::lang_start_internal
+             at /rustc/ed61e7d7e242494fb7057f2657300d9e77bb4fcb/library/std/src/rt.rs:171:5
+  23: main
+  24: <unknown>
+  25: __libc_start_main
+  26: <unknown>
+    Checking Ratatoskr v0.1.0 (/home/IhitplayzYT/Ratatoskr)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.55s

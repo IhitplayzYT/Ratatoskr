@@ -1,5 +1,5 @@
 pub mod Meta{
-    use std::fmt::Display;
+    use std::fmt::{Display, format};
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -201,100 +201,90 @@ pub fn new(name:String,color:Option<MyColor>)-> Self{
 pub enum Duration{
 SECONDS(u8),
 MIN(u8),
+HOUR(u8),
+DAY(u16),
+WEEK(u8),
+MONTH(u8),
 YEAR(u8),
 DECADE(u8),
 CENTURY(u8),
-MIN5,
-MIN10,
-MIN15,
-MIN20,
-MIN25,
-MIN30,
-MIN35,
-MIN40,
-MIN45,
-MIN50,
-MIN55,
-HOUR1,
-HOUR2,
-HOUR3,
-HOUR4,
-HOUR5,
-HOUR6,
-HOUR7,
-HOUR8,
-HOUR9,
-HOUR10,
-HOUR11,
-HOUR12,
-HOUR13,
-HOUR14,
-HOUR15,
-HOUR16,
-HOUR17,
-HOUR18,
-HOUR19,
-HOUR20,
-HOUR21,
-HOUR22,
-HOUR23,
-HOUR24,
-DAY1,
-DAY2,
-DAY3,
-DAY4,
-DAY5,
-DAY6,
-WEEK1,
-WEEK2,
-WEEK3,
-WEEK4,
-MONTH1,
-MONTH2,
-MONTH3,
-MONTH4,
-MONTH5,
-MONTH6,
-MONTH7,
-MONTH8,
-MONTH9,
-MONTH10,
-MONTH11,
-YEAR1,
-YEAR2,
-YEAR3,
-YEAR4,
-YEAR5,
-YEAR6,
-YEAR7,
-YEAR8,
-YEAR9,
-DECADE1,
-DECADE2,
-DECADE3,
-DECADE4,
-DECADE5,
-DECADE6,
-DECADE7,
-DECADE8,
-DECADE9,
-Custom(u8,u8,u8,u8,u8,u8,u8),
-Interval(u8,u8,u8,u8,u8,u8,u8,u8,u8,u8,u8,u8,u8,u8),
+Custom(u8,u8,u8,u16,u8,u8,u8),
+Interval(u8,u8,u16,u8,u8,u8,u8,u8,u16,u8,u8,u8)
 }
+
+impl Duration{
+
+pub fn from_raw_str(dur:&str) ->Self{
+    if dur.contains("(") && dur.contains(")"){
+
+        if let Some(start) = dur.find("("){
+
+            if let Some(end) = dur.find(")"){
+                if dur.to_lowercase().starts_with("custom"){
+                let k = dur.to_string().split(",").map(|x| x.parse::<u16>().expect("Expected an unsigned integer")).collect::<Vec<u16>>();
+                    if k.len() != 7{
+                        std::process::exit(2);
+                    }
+                    return Duration::Custom(
+                    u8::try_from(k[0]).unwrap(),
+                    u8::try_from(k[1]).unwrap(),
+                    u8::try_from(k[2]).unwrap(),
+                    k[3],
+                    u8::try_from(k[4]).unwrap(),
+                    u8::try_from(k[5]).unwrap(),
+                    u8::try_from(k[6]).unwrap(),
+                    );
+                }else{
+                    let x = dur.to_string()[start+1..end].parse::<u16>().expect("Expected an unsigned integer");
+                    return match &dur.to_string()[..start]{
+                        "seconds" => Duration::SECONDS(u8::try_from(x).unwrap()),
+                        "min" => Duration::MIN(u8::try_from(x).unwrap()),
+                        "hour" => Duration::HOUR(u8::try_from(x).unwrap()),
+                        "day" => Duration::DAY(x),
+                        "week" => Duration::WEEK(u8::try_from(x).unwrap()),
+                        "month" => Duration::MONTH(u8::try_from(x).unwrap()),
+                        "year" => Duration::YEAR(u8::try_from(x).unwrap()),
+                        "decade" => Duration::DECADE(u8::try_from(x).unwrap()),
+                        "century" => Duration::CENTURY(u8::try_from(x).unwrap()),
+                        _ => Duration::SECONDS(0)
+                     };   
+                    }
+                }else{
+                    return Duration::SECONDS(0);
+                }
+            } else{
+                return Duration::SECONDS(0);
+            }
+                        
+        }
+    else{
+        //  3/3/2025 10:12:56 AM -> 
+        let (start,end) = dur.split_at(dur.find("->").unwrap());
+        let (start,end) = (start.trim(),end.trim());
+        let (d1,t1) = start.split_at(start.find(" ").unwrap());
+        let (d2,t2) = end.split_at(end.find(" ").unwrap());
+
+        let pt1 = t1.split(":").map(|x| x.parse::<u8>().expect("Expected Unsigned Integer")).collect::<Vec<u8>>();
+        let pt2 = t2.split(":").map(|x| x.parse::<u8>().expect("Expected Unsigned Integer")).collect::<Vec<u8>>();
+        let pd1 = d1.split("/").map(|x| x.parse::<u16>().expect("Expected Unsigned Integer")).collect::<Vec<u16>>();
+        let pd2 = d2.split("/").map(|x| x.parse::<u16>().expect("Expected Unsigned Integer")).collect::<Vec<u16>>();
+        if pt1.len() != 3 || pt2.len() != 3 || pd1.len() != 3 || pd2.len() != 3{
+            eprintln!("Invalid date or time parse");
+            std::process::exit(3);
+        }
+        return Duration::Interval(u8::try_from(pd1[0]).unwrap(),u8::try_from(pd1[1]).unwrap(),pd1[2], pt1[0], pt1[1], pt1[2], u8::try_from(pd2[0]).unwrap(),u8::try_from(pd2[1]).unwrap(),pd2[2], pt2[0], pt2[1], pt2[2]);        
+    }
+}
+
+}
+
 
 #[derive(Debug,PartialEq, Eq,Clone, Copy)]
 pub enum Frequency{
-MINUTLY,
-HOURLY,
-DAILY,
-WEEKLY,
-MONTHLY,
-YEARLY,
-DECADELY,
-CENTURYLY,
+SECONDS(u8),
 MIN(u8),
 HOUR(u8),
-DAY(u8),
+DAY(u16),
 WEEK(u8),
 MONTH(u8),
 YEAR(u8),
@@ -302,94 +292,85 @@ DECADE(u8),
 CENTURY(u8),
 }
 
+impl Frequency{
+
+pub fn from_raw_str(freq:&str)  -> Self{
+if let Some(start) = freq.find("("){
+    if let Some(end) = freq.find(")"){
+    if freq.starts_with("DAY"){
+        return Frequency::DAY(freq.to_string()[start+1..end].parse::<u16>().expect("Expected Unsigned Integer"));
+    }else{
+        return match &freq.to_string()[..start]{
+"SECONDS" => {Frequency::SECONDS(freq.to_string()[start+1..end].parse::<u8>().expect("Expected Unsigned Integer"))},
+"MIN" => {Frequency::MIN(freq.to_string()[start+1..end].parse::<u8>().expect("Expected Unsigned Integer"))},
+"HOUR" => {Frequency::HOUR(freq.to_string()[start+1..end].parse::<u8>().expect("Expected Unsigned Integer"))},
+"WEEK" => {Frequency::WEEK(freq.to_string()[start+1..end].parse::<u8>().expect("Expected Unsigned Integer"))},
+"MONTH" => {Frequency::MONTH(freq.to_string()[start+1..end].parse::<u8>().expect("Expected Unsigned Integer"))},
+"YEAR" => {Frequency::YEAR(freq.to_string()[start+1..end].parse::<u8>().expect("Expected Unsigned Integer"))},
+"DECADE" => {Frequency::DECADE(freq.to_string()[start+1..end].parse::<u8>().expect("Expected Unsigned Integer"))},
+"CENTURY" => {Frequency::CENTURY(freq.to_string()[start+1..end].parse::<u8>().expect("Expected Unsigned Integer"))},
+_ => {Frequency::SECONDS(0)}};
+    
+    }
+
+    
+
+    }else{
+    return Frequency::SECONDS(0);
+    }
+
+}else{
+    return Frequency::SECONDS(0);
+}
+
+
+}
+
+}
+
+
+
+
+impl From<Frequency> for String{
+fn from(value: Frequency) -> Self {
+    match value{
+Frequency::SECONDS(x) => format!("SECONDS({x})"),
+Frequency::MIN(x) => format!("MIN({x})"),
+Frequency::HOUR(x) => format!("HOUR({x})"),
+Frequency::DAY(x) => format!("DAY({x})"),
+Frequency::WEEK(x) => format!("WEEK({x})"),
+Frequency::MONTH(x) => format!("MONTH({x})"),
+Frequency::YEAR(x) => format!("YEAR({x})"),
+Frequency::DECADE(x) => format!("DECADE({x})"),
+Frequency::CENTURY(x) => format!("CENTURY({x})") 
+    }
+}
+
+}
+
+
+
+
 
 impl From<Duration> for String{
 fn from(value: Duration) -> Self {
     match value{
-Duration::SECONDS(x) => &format!("SECONDS({x})"),
-Duration::MIN(x) => &format!("MIN({x})"),
-Duration::YEAR(x) => &format!("YEAR({x})"),
-Duration::DECADE(x) => &format!("DECADE({x})"),
-Duration::CENTURY(x) => &format!("CENTURY({x})"),
-Duration::MIN5 => "MIN5",
-Duration::MIN10 => "MIN10",
-Duration::MIN15 => "MIN15",
-Duration::MIN20 => "MIN20",
-Duration::MIN25 => "MIN25",
-Duration::MIN30 => "MIN30",
-Duration::MIN35 => "MIN35",
-Duration::MIN40 => "MIN40",
-Duration::MIN45 => "MIN45",
-Duration::MIN50 => "MIN50",
-Duration::MIN55 => "MIN55",
-Duration::HOUR1 => "HOUR1",
-Duration::HOUR2 => "HOUR2",
-Duration::HOUR3 => "HOUR3",
-Duration::HOUR4 => "HOUR4",
-Duration::HOUR5 => "HOUR5",
-Duration::HOUR6 => "HOUR6",
-Duration::HOUR7 => "HOUR7",
-Duration::HOUR8 => "HOUR8",
-Duration::HOUR9 => "HOUR9",
-Duration::HOUR10 => "HOUR10",
-Duration::HOUR11 => "HOUR11",
-Duration::HOUR12 => "HOUR12",
-Duration::HOUR13 => "HOUR13",
-Duration::HOUR14 => "HOUR14",
-Duration::HOUR15 => "HOUR15",
-Duration::HOUR16 => "HOUR16",
-Duration::HOUR17 => "HOUR17",
-Duration::HOUR18 => "HOUR18",
-Duration::HOUR19 => "HOUR19",
-Duration::HOUR20 => "HOUR20",
-Duration::HOUR21 => "HOUR21",
-Duration::HOUR22 => "HOUR22",
-Duration::HOUR23 => "HOUR23",
-Duration::HOUR24 => "HOUR24",
-Duration::DAY1 => "DAY1",
-Duration::DAY2 => "DAY2",
-Duration::DAY3 => "DAY3",
-Duration::DAY4 => "DAY4",
-Duration::DAY5 => "DAY5",
-Duration::DAY6 => "DAY6",
-Duration::WEEK1 => "WEEK1",
-Duration::WEEK2 => "WEEK2",
-Duration::WEEK3 => "WEEK3",
-Duration::WEEK4 => "WEEK4",
-Duration::MONTH1 => "MONTH1",
-Duration::MONTH2 => "MONTH2",
-Duration::MONTH3 => "MONTH3",
-Duration::MONTH4 => "MONTH4",
-Duration::MONTH5 => "MONTH5",
-Duration::MONTH6 => "MONTH6",
-Duration::MONTH7 => "MONTH7",
-Duration::MONTH8 => "MONTH8",
-Duration::MONTH9 => "MONTH9",
-Duration::MONTH10 => "MONTH10",
-Duration::MONTH11 => "MONTH11",
-Duration::YEAR1 => "YEAR1",
-Duration::YEAR2 => "YEAR2",
-Duration::YEAR3 => "YEAR3",
-Duration::YEAR4 => "YEAR4",
-Duration::YEAR5 => "YEAR5",
-Duration::YEAR6 => "YEAR6",
-Duration::YEAR7 => "YEAR7",
-Duration::YEAR8 => "YEAR8",
-Duration::YEAR9 => "YEAR9",
-Duration::DECADE1 => "DECADE1",
-Duration::DECADE2 => "DECADE2",
-Duration::DECADE3 => "DECADE3",
-Duration::DECADE4 => "DECADE4",
-Duration::DECADE5 => "DECADE5",
-Duration::DECADE6 => "DECADE6",
-Duration::DECADE7 => "DECADE7",
-Duration::DECADE8 => "DECADE8",
-Duration::DECADE9 => "DECADE9",
-Duration::Custom(a,b,c,d,e,f,g) => &format!("Custom({a},{b},{c},{d},{e},{f},{g})"),
-Duration::Interval(a,b,c,d,e,f,g,A,B,C,D,E,F,G ) => &format!("Interval(Custom({a},{b},{c},{d},{e},{f},{g}) -> Custom({A},{B},{C},{D},{E},{F},{G}))"),
-    }.to_string()
+Duration::SECONDS(x) => format!("SECONDS({x})"),
+Duration::MIN(x) => format!("MIN({x})"),
+Duration::HOUR(x) => format!("HOUR({x})"),
+Duration::DAY(x) => format!("DAY({x})"),
+Duration::WEEK(x) => format!("WEEK({x})"),
+Duration::MONTH(x) => format!("MONTH{x}"),
+Duration::YEAR(x) => format!("YEAR({x})"),
+Duration::DECADE(x) => format!("DECADE({x})"),
+Duration::CENTURY(x) => format!("CENTURY({x})"),
+Duration::Custom(a,b ,c ,d ,e ,f ,g ) => format!("Custom({a},{b},{c},{d},{e},{f},{g})"),
+Duration::Interval(a,b,c ,d ,e ,f ,g ,h ,i ,j ,k ,l ) => format!("{a}/{b}/{c} {d}:{e}:{f}->{g}/{h}/{i} {j}:{k}:{l}")
+    }
 }
 
+
 }
+
 
 }
