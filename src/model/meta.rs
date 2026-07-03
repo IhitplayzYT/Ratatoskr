@@ -1,19 +1,18 @@
 pub mod Meta{
-    use std::fmt::{Display, format};
-
+use std::fmt::{Display, format};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-    use colored::Color;
+use colored::Color;
 
 
-    #[derive(Debug,PartialEq, Eq,Hash,Clone)]
+#[derive(Debug,PartialEq, Eq,Hash,Clone)]
     pub enum Priority {
     Low,
     Default,
     Medium,
     High,
     Critical,
-}
+    }
 
 impl From<Priority> for String{
     fn from(value: Priority) -> Self {
@@ -155,7 +154,34 @@ impl MyColor{
         }
     }
 
+}
 
+
+impl From<String> for MyColor{
+    fn from(value: String) -> Self {
+        let (r,g,b) = (&value[..2],&value[2..4],&value[4..6]);
+        let (r,g,b) = (u8::from_str_radix(r, 16).unwrap(),u8::from_str_radix(g, 16).unwrap(),u8::from_str_radix(b, 16).unwrap());
+        match (r,g,b) {
+            (0,0,0) => MyColor::Black,
+            (125,0,0) => MyColor::Red,
+            (0,125,0) => MyColor::Green,
+            (181,165,54) => MyColor::Yellow,
+            (0,0,125) => MyColor::Blue,
+            (76,51,102) => MyColor::Magenta,
+            (44,167,184) => MyColor::Cyan,
+            (212,210,195) => MyColor::White,
+            (33,33,33) => MyColor::BrightBlack,
+            (255,0,0) => MyColor::BrightRed,
+            (0,255,0) => MyColor::BrightGreen,
+            (255,230,0) => MyColor::BrightYellow,
+            (0,0,255) => MyColor::BrightBlue,
+            (123,0,255) => MyColor::BrightMagenta,
+            (0,218,247) => MyColor::BrightCyan,
+            (255,255,255) => MyColor::BrightWhite,
+            _ => MyColor::RGB(r, g, b)
+        }
+         
+    }
 
 }
 
@@ -281,6 +307,7 @@ pub fn from_raw_str(dur:&str) ->Self{
 
 #[derive(Debug,PartialEq, Eq,Clone, Copy)]
 pub enum Frequency{
+Once,
 SECONDS(u8),
 MIN(u8),
 HOUR(u8),
@@ -309,6 +336,7 @@ if let Some(start) = freq.find("("){
 "YEAR" => {Frequency::YEAR(freq.to_string()[start+1..end].parse::<u8>().expect("Expected Unsigned Integer"))},
 "DECADE" => {Frequency::DECADE(freq.to_string()[start+1..end].parse::<u8>().expect("Expected Unsigned Integer"))},
 "CENTURY" => {Frequency::CENTURY(freq.to_string()[start+1..end].parse::<u8>().expect("Expected Unsigned Integer"))},
+"Once" => {Frequency::Once},
 _ => {Frequency::SECONDS(0)}};
     
     }
@@ -342,7 +370,8 @@ Frequency::WEEK(x) => format!("WEEK({x})"),
 Frequency::MONTH(x) => format!("MONTH({x})"),
 Frequency::YEAR(x) => format!("YEAR({x})"),
 Frequency::DECADE(x) => format!("DECADE({x})"),
-Frequency::CENTURY(x) => format!("CENTURY({x})") 
+Frequency::CENTURY(x) => format!("CENTURY({x})"),
+Frequency::Once => format!("Once"),
     }
 }
 
@@ -371,6 +400,37 @@ Duration::Interval(a,b,c ,d ,e ,f ,g ,h ,i ,j ,k ,l ) => format!("{a}/{b}/{c} {d
 
 
 }
+
+#[derive(Debug,PartialEq, Eq,Clone, Copy)]
+pub enum Txn_Type{
+    DEBIT,
+    CREDIT,
+    BLOCKED
+}
+
+impl From<Txn_Type> for String{
+    fn from(value: Txn_Type) -> Self {
+        match value{
+            Txn_Type::BLOCKED => format!("BLOCKED"),
+            Txn_Type::DEBIT => format!("DEBIT"),
+            Txn_Type::CREDIT => format!("CREDIT"),
+        }
+    }
+
+}
+
+impl From<String> for Txn_Type{
+    fn from(value: String) -> Self {
+        match &value[..]{
+            "BLOCKEED" => Txn_Type::BLOCKED,
+            "CREDIT" => Txn_Type::CREDIT,
+            "DEBIT" => Txn_Type::DEBIT,
+            _ => Txn_Type::BLOCKED
+        }
+    }
+
+}
+
 
 
 }

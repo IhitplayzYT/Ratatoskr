@@ -65,3 +65,25 @@ CREATE TABLE Todo_task_tags(
     FOREIGN KEY(task_id) REFERENCES Todo_tasks(id) ON DELETE CASCADE,
     FOREIGN KEY(tag_id) REFERENCES tags(id) ON DELETE CASCADE
 );
+
+
+CREATE TABLE Ledger(
+    id CHAR(36) PRIMARY KEY,
+    item TEXT NOT NULL,
+    desc LONGTEXT,
+    amt DECIMAL NOT NULL,
+    txn_type TEXT NOT NULL,
+    frequency TEXT NOT NULL,
+    txn_time DATETIME NOT NULL,
+);
+
+CREATE TABLE Calendar(
+    id CHAR(36) PRIMARY KEY,
+    event TEXT NOT NULL,
+    desc LONGTEXT,
+    duration TEXT,
+    frequency TEXT NOT NULL,
+    date DATETIME NOT NULL,
+    color TEXT,
+);
+
