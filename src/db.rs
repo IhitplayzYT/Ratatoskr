@@ -1,5 +1,8 @@
+#[allow(dead_code,non_camel_case_types,non_snake_case)]
+
 pub mod Database{
 use std::collections::HashSet;
+use std::str::FromStr;
 
 use chrono::{DateTime, NaiveDateTime, Utc};
 use mysql::{
@@ -872,6 +875,7 @@ Ok(ret)
         ", (), |(id,item,desc,txn_type,amt,freq,txn_time):(String,String,String,String,String,String,NaiveDateTime)|{
             let mut k =Finance_task::new(item, Some(desc), Txn_Type::from(txn_type), Decimal::from_str_exact(&amt).unwrap(), Some(Frequency::from_raw_str(&freq)));
             k.txn_time = DateTime::<Utc>::from_naive_utc_and_offset(txn_time,Utc);
+            k.set_id(Uuid::from_str(&id).unwrap());
             k
 
         })?);

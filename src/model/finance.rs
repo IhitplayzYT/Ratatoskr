@@ -1,3 +1,5 @@
+#[allow(dead_code,non_camel_case_types,non_snake_case)]
+
 pub mod Finance{
     use chrono::DateTime;
 use chrono::Utc;
@@ -10,7 +12,7 @@ use rust_decimal::prelude::*;
         id:Uuid,
         item:String,
         desc:Option<String>,
-        txn_type: Txn_Type,
+        pub txn_type: Txn_Type,
         amnt: Decimal,
         freq:Frequency,
         pub txn_time: DateTime<Utc>
@@ -32,7 +34,11 @@ use rust_decimal::prelude::*;
        pub fn get_amnt(&self) -> Decimal{self.amnt}
        pub fn get_freq(&self) -> Frequency {self.freq}
        pub fn get_txn_time(&self) -> DateTime<Utc> {self.txn_time}
+       pub fn set_id(&mut self,id:Uuid){
+        self.id = id;
+       }
     
+       
     }
 
 
@@ -67,8 +73,10 @@ use rust_decimal::prelude::*;
             return ret;            
         }
 
-        pub fn unblock(id:Uuid) -> Decimal{
-            Decimal::ZERO
+        pub fn unblock(&mut self,id:Uuid){
+            self.txns.iter_mut().for_each(|x| if x.get_id() == id{
+               x.txn_type = Txn_Type::CREDIT; 
+            });
         }
         
         pub fn retrive_txn(&self) -> &Vec<Finance_task> {

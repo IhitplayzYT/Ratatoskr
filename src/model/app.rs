@@ -1,39 +1,131 @@
+#[allow(dead_code,non_camel_case_types,non_snake_case)]
+
 pub mod App{
-use std::{collections::HashSet, fs, io};
+use std::{collections::{HashSet}, fs, hash::Hash, io};
 
 
-use crate::model::{journal::Journal::Journal_task, meta::Meta::{Tag,MyColor}, notes::Note::Note_task, todo::Todo::Todo_task};
+use crate::{db::Database::Database, model::{calendar::Calendar::Calendar_task, finance::Finance::Ledger, journal::Journal::Journal_task, meta::Meta::{MyColor, Tag}, notes::Note::Note_task, todo::Todo::Todo_task}};
 
-use chrono::TimeZone;
+use ratatui::layout::Rect;
 use rust_decimal::Decimal;
 use crate::Conversion::CONVERSION_RATES;
 use serde::{Deserialize,Serialize};
-pub struct Database {
+use ropey::Rope;
+pub struct Feature_set {
     pub todos: HashSet<Todo_task>,
     pub notes: HashSet<Note_task>,
     pub journals: HashSet<Journal_task>,
+    pub finance: Ledger,
+    pub calendars: HashSet<Calendar_task>,
     pub tags: HashSet<Tag>,
 }
 
-//pub struct App {
-    //pub db: Database,
-    //pub page: Page,
-    //pub sidebar: SidebarState,
-    //pub editor: EditorState,
-    //pub popup: PopupState,
-    //pub search: SearchState,
-//}
+// TODO: LOAD THESE FEATURES FROM DB
+
+impl Default for Feature_set{
+    fn default() -> Self {
+        Self { todos: HashSet::new(), notes: HashSet::new(), journals: HashSet::new(), finance: Ledger::new(), calendars: HashSet::new(), tags: HashSet::new() }
+    }
+
+}
 
 
 
+pub struct App {
+    pub features: Feature_set,
+    pub db: Database,
+    pub settings:Settings,
+    pub page:Page,
+    pub editor:EditorState,
+    pub last_editor_section: Rect,
+    pub is_quit: bool
+}
+
+impl App {
+    pub fn new(url:String) -> Self {
+        Self {
+            features: Feature_set::default(),
+            db: Database::new(&url).unwrap(),
+            settings: Settings::default(),
+            page: Page::Home,
+            editor: EditorState::default(),
+            last_editor_section:Rect::default(),
+            is_quit: false,
+        }
+    }
+}
 
 
-#[derive(Debug,PartialEq, Eq,Clone, Copy)]
+
+pub enum Page{
+    Home,
+    Journal,
+    Note,
+    Todo,
+    Calendar,
+    Finance,
+    Settings
+}
+
+impl Page{
+    pub const ALL:[Page;7] = [
+        Page::Home,
+        Page::Journal,
+        Page::Note,
+        Page::Todo,
+        Page::Calendar,
+        Page::Finance,
+        Page::Settings,
+    ];
+
+    pub fn title(&self) -> &'static str{
+        match self {
+            Page::Home => "Home",
+            Page::Journal => "Journal",
+            Page::Note => "Note",
+            Page::Todo => "Todo",
+            Page::Calendar => "Calendar",
+            Page::Finance => "Finance",
+            Page::Settings => "Settings",
+        }
+    }
+
+    pub fn idx(&self) -> usize {
+        match self {
+            Page::Home => 0,
+            Page::Journal => 1,
+            Page::Note => 2,
+            Page::Todo => 3,
+            Page::Calendar => 4,
+            Page::Finance => 5,
+            Page::Settings => 6,
+        }
+    }
+
+    pub fn from_idx(i: usize) -> Page {
+        match i % 7 {
+            0 => Page::Home,
+            1 => Page::Journal,
+            2 => Page::Note,
+            3 => Page::Todo,
+            4 => Page::Calendar,
+            5 => Page::Finance,
+            _ => Page::Settings,
+        }
+    }
+
+
+}
+
+
+#[derive(Debug,PartialEq, Eq,Clone)]
 pub struct EditorState {
     pub mode: EditorMode,
     pub cursor_x: usize,
     pub cursor_y: usize,
     pub dirty: bool,
+    pub buffer: Rope, // TODO: swap per active task/page instead of one shared demo buffer
+    pub vim: Vimstate,
 }
 
 #[derive(Debug,PartialEq, Eq,Hash,Clone, Copy)]
@@ -42,11 +134,134 @@ pub enum EditorMode{
     Vim
 }
 
+impl Default for EditorState{
+    fn default() -> Self {
+        Self { mode: EditorMode::Normal, cursor_x: 0, cursor_y: 0, dirty: false,buffer:Rope::from_str("Start Typing\nRope"),vim:Vimstate::default()}
+    }
+
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum Vim_mode {
+    Normal,
+    Insert,
+}
+
+/// for mutli key vim command
+#[derive(Debug, PartialEq, Eq, Clone, Copy,)]
+pub enum Pending {
+    None,
+    G,  // 'g'
+    Y,  // 'y' (yy) or 'i' (yiw)
+    YI, // ''w'
+    D,  // 'd' (dd) or 'i' (diw)
+    DI, // 'w'
+    R,  // replacement char
+}
+ 
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Vimstate {
+    pub submode: Vim_mode,
+    pub pending: Pending,
+    pub register: String,
+    pub register_line: bool,
+}
+ 
+impl Default for Vimstate {
+    fn default() -> Self {
+        Self {
+            submode: Vim_mode::Normal,
+            pending: Pending::None,
+            register: String::new(),
+            register_line: false,
+        }
+    }
+}
+
+
+
+
+#[derive(Debug, Clone, Copy,Serialize,Deserialize,PartialEq, Eq)]
+pub enum Color_channel {
+    R,
+    G,
+    B,
+}
+
+impl Color_channel{
+    pub fn next(self) -> Color_channel {
+        match self {
+            Color_channel::R => Color_channel::G,
+            Color_channel::G => Color_channel::B,
+            Color_channel::B => Color_channel::R,
+        }
+    }
+    pub fn prev(self) -> Color_channel {
+        match self {
+            Color_channel::R => Color_channel::B,
+            Color_channel::G => Color_channel::R,
+            Color_channel::B => Color_channel::G,
+        }
+    }
+
+
+}
+
+/// Live/interactive RGB color picker state.
+#[derive(Debug, Clone,Serialize,Deserialize)]
+pub struct ColorPickerState {
+    pub selected: Color_channel,
+    pub component: Theme_comp,
+    pub buffers: [String;3],
+}
+ 
+impl ColorPickerState {
+    pub fn new(theme: &Theme) -> Self {
+        let mut s = Self {
+            component: Theme_comp::Primary,
+            selected: Color_channel::R,
+            buffers: [String::new(), String::new(), String::new()],
+        };
+        s.reload_from_theme(theme);
+        s
+    }
+ 
+    /// Refill the text buffers from the theme (call after switching component).
+    pub fn reload_from_theme(&mut self, theme: &Theme) {
+        let c = self.component.get(theme);
+        self.buffers = [
+            c.channel(Color_channel::R).to_string(),
+            c.channel(Color_channel::G).to_string(),
+            c.channel(Color_channel::B).to_string(),
+        ];
+    }
+ 
+    pub fn buffer_mut(&mut self, ch: Color_channel) -> &mut String {
+        match ch {
+            Color_channel::R => &mut self.buffers[0],
+            Color_channel::G => &mut self.buffers[1],
+            Color_channel::B => &mut self.buffers[2],
+        }
+    }
+ 
+    /// Parse current focused buffer, clamp 0-255, write straight into theme
+    /// live as you type.
+    pub fn commit_focused_channel(&mut self, theme: &mut Theme) {
+        let raw = self.buffer_mut(self.selected).clone();
+        let value: u8 = raw.parse::<u32>().unwrap_or(0).min(255) as u8;
+        let updated = self.component.get(theme).with_channel(self.selected,value);
+        self.component.set(theme, updated);
+    }
+}
+
 
 
 
 #[derive(Serialize,Deserialize,Debug)]
+
 pub struct Settings {
+    pub color_picker:ColorPickerState,
     pub theme: Theme,
     pub autosave: bool,
     pub autosave_freq: usize,
@@ -58,13 +273,23 @@ pub struct Settings {
     pub currency: Currency
 }
 
-impl Settings{
+impl Default for Settings{
+    fn default() -> Self {
+        let theme = Theme::default();
+        Self { color_picker: ColorPickerState::new(&theme), theme, autosave: false, autosave_freq: 0, vim_mode: false, confirm_delete: true, date_format: "dd-mm-yyyy".to_string(), timezone: "india".to_string(), autocomplete: false, currency: Currency::INR}
+    }
 
-fn new() -> Settings{
-Self { theme:Default::default(),autocomplete:false, autosave: false,autosave_freq:usize::MAX, vim_mode: false, confirm_delete: true, date_format:"dd-mm-yyyy".to_string(),timezone:"Utc".to_string(),currency:Currency::INR}
 }
 
-fn save(&self) -> io::Result<()>{
+
+impl Settings{
+
+pub fn new() -> Settings{
+let theme = Theme::default();
+Self { theme,autocomplete:false, autosave: false,autosave_freq:usize::MAX, vim_mode: false, confirm_delete: true, date_format:"dd-mm-yyyy".to_string(),timezone:"Utc".to_string(),currency:Currency::INR,color_picker:ColorPickerState::new(&theme)}
+}
+
+pub fn save(&self) -> io::Result<()>{
 fs::write("settings.json",serde_json::to_string_pretty(self)?)?;
 Ok(())    
 }
@@ -79,9 +304,10 @@ self.autosave_freq = other.autosave_freq;
 self.timezone = other.timezone;
 self.autocomplete = other.autocomplete;
 self.currency = other.currency;
+self.color_picker = other.color_picker;
 }
 
-fn load(&mut self,path:Option<String>) -> bool{
+pub fn load(&mut self,path:Option<String>) -> bool{
 self.set(serde_json::from_str::<Settings>(&fs::read_to_string(if let Some(x) = path {x} else{"settings.json".to_string()}).unwrap()).unwrap());
 true
 }
@@ -94,7 +320,7 @@ true
 
 
 
-#[derive(Serialize,Deserialize,Debug)]
+#[derive(Serialize,Deserialize,Debug,Clone,Copy)]
 pub struct Theme {
     pub primary: MyColor,
     pub secondary: MyColor,
@@ -140,6 +366,72 @@ pub fn Load(&mut self,conf_path: Option<String>){
 
 
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq,Serialize,Deserialize)]
+pub enum Theme_comp {
+    Primary,
+    Secondary,
+    Accent,
+    Success,
+    Warning,
+    Error,
+}
+ 
+impl Theme_comp {
+    pub const ALL: [Theme_comp; 6] = [
+        Theme_comp::Primary,
+        Theme_comp::Secondary,
+        Theme_comp::Accent,
+        Theme_comp::Success,
+        Theme_comp::Warning,
+        Theme_comp::Error,
+    ];
+ 
+    pub fn title(self) -> &'static str {
+        match self {
+            Theme_comp::Primary => "Primary",
+            Theme_comp::Secondary => "Secondary",
+            Theme_comp::Accent => "Accent",
+            Theme_comp::Success => "Success",
+            Theme_comp::Warning => "Warning",
+            Theme_comp::Error => "Error",
+        }
+    }
+ 
+    pub fn get(self, theme: &Theme) -> MyColor {
+        match self {
+            Theme_comp::Primary => theme.primary,
+            Theme_comp::Secondary => theme.secondary,
+            Theme_comp::Accent => theme.accent,
+            Theme_comp::Success => theme.success,
+            Theme_comp::Warning => theme.warning,
+            Theme_comp::Error => theme.error,
+        }
+    }
+ 
+    pub fn set(self, theme: &mut Theme, c: MyColor) {
+        let slot = match self {
+            Theme_comp::Primary => &mut theme.primary,
+            Theme_comp::Secondary => &mut theme.secondary,
+            Theme_comp::Accent => &mut theme.accent,
+            Theme_comp::Success => &mut theme.success,
+            Theme_comp::Warning => &mut theme.warning,
+            Theme_comp::Error => &mut theme.error,
+        };
+        *slot = c;
+    }
+ 
+    pub fn next(self) -> Theme_comp {
+        let i = Theme_comp::ALL.iter().position(|c| *c == self).unwrap();
+        Theme_comp::ALL[(i + 1) % Theme_comp::ALL.len()]
+    }
+    pub fn prev(self) -> Theme_comp {
+        let i = Theme_comp::ALL.iter().position(|c| *c == self).unwrap();
+        Theme_comp::ALL[(i + Theme_comp::ALL.len() - 1) % Theme_comp::ALL.len()]
+    }
+}
+
+
 
 
 #[derive(Serialize,Deserialize,Debug,Hash,PartialEq, Eq,Clone, Copy)]

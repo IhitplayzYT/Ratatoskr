@@ -1,8 +1,11 @@
+#[allow(dead_code,non_camel_case_types,non_snake_case)]
+
 pub mod Meta{
-use std::fmt::{Display, format};
+use std::fmt::Display;
+use ratatui::style::Color;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-use colored::Color;
+
+use crate::model::app::App::Color_channel;
 
 
 #[derive(Debug,PartialEq, Eq,Hash,Clone)]
@@ -95,18 +98,7 @@ fn from(value: Mood) -> Self {
 
 
 
-    #[derive(Debug,PartialEq, Eq,Hash)]
-pub enum Page {
-    Dashboard,
-    Todos,
-    Notes,
-    Journal,
-    Calendar,
-    Search,
-    Settings,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq,Hash,Deserialize,Serialize)]
+#[derive(Debug, Clone,Copy,PartialEq, Eq,Hash,Deserialize,Serialize)]
 pub enum MyColor {
     Black,
     Red,
@@ -154,6 +146,110 @@ impl MyColor{
         }
     }
 
+    pub fn get_rgb(&self) -> (u8,u8,u8){
+        let (r, g, b) = match *self {
+            MyColor::Black => (0, 0, 0),
+            MyColor::Red => (125, 0, 0),
+            MyColor::Green => (0, 125, 0),
+            MyColor::Yellow => (181, 165, 54),
+            MyColor::Blue => (0, 0, 125),
+            MyColor::Magenta => (76, 51, 102),
+            MyColor::Cyan => (44, 167, 184),
+            MyColor::White => (212, 210, 195),
+            MyColor::BrightBlack => (33, 33, 33),
+            MyColor::BrightRed => (255, 0, 0),
+            MyColor::BrightGreen => (0, 255, 0),
+            MyColor::BrightYellow => (255, 230, 0),
+            MyColor::BrightBlue => (0, 0, 255),
+            MyColor::BrightMagenta => (123, 0, 255),
+            MyColor::BrightCyan => (0, 218, 247),
+            MyColor::BrightWhite => (255, 255, 255),
+            MyColor::RGB(r, g, b) => (r, g, b),
+        };
+        (r,g,b)
+    }
+
+
+        pub fn channel(&self, chan:Color_channel) -> u8 {
+        let (r, g, b) = match *self {
+            MyColor::Black => (0, 0, 0),
+            MyColor::Red => (125, 0, 0),
+            MyColor::Green => (0, 125, 0),
+            MyColor::Yellow => (181, 165, 54),
+            MyColor::Blue => (0, 0, 125),
+            MyColor::Magenta => (76, 51, 102),
+            MyColor::Cyan => (44, 167, 184),
+            MyColor::White => (212, 210, 195),
+            MyColor::BrightBlack => (33, 33, 33),
+            MyColor::BrightRed => (255, 0, 0),
+            MyColor::BrightGreen => (0, 255, 0),
+            MyColor::BrightYellow => (255, 230, 0),
+            MyColor::BrightBlue => (0, 0, 255),
+            MyColor::BrightMagenta => (123, 0, 255),
+            MyColor::BrightCyan => (0, 218, 247),
+            MyColor::BrightWhite => (255, 255, 255),
+            MyColor::RGB(r, g, b) => (r, g, b),
+        };
+
+        match chan {
+            Color_channel::R => r,
+            Color_channel::G => g,
+            Color_channel::B => b,
+        }
+    }
+
+    pub fn with_channel(&self,chan:Color_channel,v:u8) -> MyColor{
+        let (r, g, b) = match *self {
+            MyColor::Black => (0, 0, 0),
+            MyColor::Red => (125, 0, 0),
+            MyColor::Green => (0, 125, 0),
+            MyColor::Yellow => (181, 165, 54),
+            MyColor::Blue => (0, 0, 125),
+            MyColor::Magenta => (76, 51, 102),
+            MyColor::Cyan => (44, 167, 184),
+            MyColor::White => (212, 210, 195),
+            MyColor::BrightBlack => (33, 33, 33),
+            MyColor::BrightRed => (255, 0, 0),
+            MyColor::BrightGreen => (0, 255, 0),
+            MyColor::BrightYellow => (255, 230, 0),
+            MyColor::BrightBlue => (0, 0, 255),
+            MyColor::BrightMagenta => (123, 0, 255),
+            MyColor::BrightCyan => (0, 218, 247),
+            MyColor::BrightWhite => (255, 255, 255),
+            MyColor::RGB(r, g, b) => (r, g, b),
+        };
+
+        match chan {
+            Color_channel::R => MyColor::RGB(v,g,b),
+            Color_channel::G => MyColor::RGB(r,v,b),
+            Color_channel::B => MyColor::RGB(r,g,v),
+        }
+    }
+
+    pub fn to_color(&self) -> Color{
+        let (r, g, b) = match *self {
+            MyColor::Black => (0, 0, 0),
+            MyColor::Red => (125, 0, 0),
+            MyColor::Green => (0, 125, 0),
+            MyColor::Yellow => (181, 165, 54),
+            MyColor::Blue => (0, 0, 125),
+            MyColor::Magenta => (76, 51, 102),
+            MyColor::Cyan => (44, 167, 184),
+            MyColor::White => (212, 210, 195),
+            MyColor::BrightBlack => (33, 33, 33),
+            MyColor::BrightRed => (255, 0, 0),
+            MyColor::BrightGreen => (0, 255, 0),
+            MyColor::BrightYellow => (255, 230, 0),
+            MyColor::BrightBlue => (0, 0, 255),
+            MyColor::BrightMagenta => (123, 0, 255),
+            MyColor::BrightCyan => (0, 218, 247),
+            MyColor::BrightWhite => (255, 255, 255),
+            MyColor::RGB(r, g, b) => (r, g, b),
+        };
+        Color::Rgb(r, g, b)
+    }
+
+
 }
 
 
@@ -186,29 +282,6 @@ impl From<String> for MyColor{
 }
 
 
-impl From<MyColor> for Color {
-    fn from(c: MyColor) -> Self {
-        match c {
-            MyColor::Black => Color::Black,
-            MyColor::Red => Color::Red,
-            MyColor::Green => Color::Green,
-            MyColor::Yellow => Color::Yellow,
-            MyColor::Blue => Color::Blue,
-            MyColor::Magenta => Color::Magenta,
-            MyColor::Cyan => Color::Cyan,
-            MyColor::White => Color::White,
-            MyColor::BrightBlack => Color::BrightBlack,
-            MyColor::BrightRed => Color::BrightRed,
-            MyColor::BrightGreen => Color::BrightGreen,
-            MyColor::BrightYellow => Color::BrightYellow,
-            MyColor::BrightBlue => Color::BrightBlue,
-            MyColor::BrightMagenta => Color::BrightMagenta,
-            MyColor::BrightCyan => Color::BrightCyan,
-            MyColor::BrightWhite => Color::BrightWhite,
-            MyColor::RGB(r,g ,b ) => Color::TrueColor { r, g, b }
-        }
-    }
-}
 
 
     #[derive(Debug,PartialEq, Eq,Hash,Clone)]

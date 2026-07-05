@@ -1,10 +1,12 @@
+#[allow(dead_code,non_camel_case_types,non_snake_case)]
+
 pub mod Helper {
 
-    const DBG_STR: &str = "";
+    const DBG_STR: &str = "Usage";
     const OK: i32 = 0;
     const ERR: i32 = 1;
 
-    #[derive(Debug)]
+    #[derive(Debug,Clone)]
     pub struct CLI {
         pub debug: bool,
         pub srcdir: Option<String>,
@@ -21,7 +23,7 @@ pub mod Helper {
                 debug: false,
                 srcdir: None,
                 ifile: None,
-                port:8080,
+                port:3306,
                 url:None,
                 user:"root".to_string(),
                 password: None
@@ -30,18 +32,19 @@ pub mod Helper {
 
         pub fn Parse_Args(&mut self) {
             let clargs = std::env::args().collect::<Vec<String>>();
-            self.user = match std::env::var("DB_USERNAME") {
+            self.user = match std::env::var("DB_USER") {
                Ok(u) => u,
                _ => "root".to_string()
             };
-            self.password = match std::env::var("DB_PASSWORD") {
+            self.password = match std::env::var("DB_PASSWD") {
                Ok(u) => {if u.is_empty() {None} else {Some(u)}},
                _ => None
             };
             if clargs.is_empty() {
                 return;
             }
-            for i in &clargs {
+            for i in clargs.iter().skip(1).collect::<Vec<&String>>() {
+                
                 if i == "-h" || i == "--help" || i == "-H" || i == "--Help" {
                     Help();
                 } else if i == "-d" || i == "--debug" || i == "-D" || i == "--Debug" {
@@ -63,6 +66,7 @@ pub mod Helper {
                     Help();
                 }
             }
+            println!("{:?}",self);
         }
     }
 
