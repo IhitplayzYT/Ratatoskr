@@ -270,13 +270,14 @@ pub struct Settings {
     pub date_format: String,
     pub timezone: String,
     pub autocomplete: bool,
-    pub currency: Currency
+    pub currency: Currency,
+    pub settings_ui: SettingsUiState,
 }
 
 impl Default for Settings{
     fn default() -> Self {
         let theme = Theme::default();
-        Self { color_picker: ColorPickerState::new(&theme), theme, autosave: false, autosave_freq: 0, vim_mode: false, confirm_delete: true, date_format: "dd-mm-yyyy".to_string(), timezone: "india".to_string(), autocomplete: false, currency: Currency::INR}
+        Self { color_picker: ColorPickerState::new(&theme), theme, autosave: false, autosave_freq: 0, vim_mode: false, confirm_delete: true, date_format: "dd-mm-yyyy".to_string(), timezone: "Utc".to_string(), autocomplete: false, currency: Currency::INR,settings_ui:SettingsUiState { autosave_freq_input: "0 sec".to_string(), autosave_freq_valid: false, timezone_input: "UTC".to_string(),..Default::default()}}
     }
 
 }
@@ -286,7 +287,7 @@ impl Settings{
 
 pub fn new() -> Settings{
 let theme = Theme::default();
-Self { theme,autocomplete:false, autosave: false,autosave_freq:usize::MAX, vim_mode: false, confirm_delete: true, date_format:"dd-mm-yyyy".to_string(),timezone:"Utc".to_string(),currency:Currency::INR,color_picker:ColorPickerState::new(&theme)}
+Self { theme,autocomplete:false, autosave: false,autosave_freq:0, vim_mode: false, confirm_delete: true, date_format:"dd-mm-yyyy".to_string(),timezone:"Utc".to_string(),currency:Currency::INR,color_picker:ColorPickerState::new(&theme),settings_ui:SettingsUiState {autosave_freq_input: "0 sec".to_string(), autosave_freq_valid: false, timezone_input: "Utc".to_string(),..Default::default()}}
 }
 
 pub fn save(&self) -> io::Result<()>{
@@ -315,8 +316,53 @@ true
 }
 
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq,Serialize,Deserialize)]
+pub enum SettingsFocus { ColorPicker, AutosaveEnabled, AutosaveFreq, Currency, Timezone }
+
+impl Default for SettingsFocus{
+    fn default() -> Self {
+        Self::ColorPicker
+    }
+
+}
 
 
+#[derive(Debug, Clone, Default,Deserialize,Serialize)]
+pub struct SettingsUiState {
+    pub focus: SettingsFocus, // impl Default -> ColorPicker
+    pub autosave_freq_input: String, // raw typed text, e.g. "2 hr 30 min"
+    pub autosave_freq_valid: bool,
+    pub timezone_input: String,
+}
+
+
+/// Parses "5 min", "60 sec", "2 hr 30 min" into seconds.
+pub fn parse_autosave_duration(input: &str) -> Option<usize> {
+    let mut total = 0usize;
+    let mut chars = input.trim().chars().peekable();
+    let mut saw_any = false;
+    while chars.peek().is_some() {
+        while chars.peek().map_or(false, |c| c.is_whitespace()) { chars.next(); }
+        let mut num = String::new();
+        while chars.peek().map_or(false, |c| c.is_ascii_digit()) { num.push(chars.next().unwrap()); }
+        if num.is_empty() { return None; }
+        while chars.peek().map_or(false, |c| c.is_whitespace()) { chars.next(); }
+        let mut unit = String::new();
+        while chars.peek().map_or(false, |c| c.is_alphabetic()) { unit.push(chars.next().unwrap()); }
+        let n: usize = num.parse().ok()?;
+        let mult = match unit.to_lowercase().as_str() {
+            "s" | "sec" | "secs" | "second" | "seconds" => 1,
+            "m" | "min" | "mins" | "minute" | "minutes" => 60,
+            "h" | "hr" | "hrs" | "hour" | "hours" => 3600,
+            "d" | "day" | "days" => 86400,
+            _ => return None,
+        };
+        total += n * mult;
+        saw_any = true;
+        while chars.peek().map_or(false, |c| c.is_whitespace()) { chars.next(); }
+    }
+    saw_any.then_some(total)
+}
 
 
 
@@ -501,6 +547,127 @@ pub fn convert(
     let to_rate = map.get(&to)?;
     Some(amount / *from_rate * *to_rate)
 }
+
+
+impl Currency {
+    const ALL: [Currency; 55] = [    Currency::USD,
+    Currency::EUR,
+    Currency::GBP,
+    Currency::INR,
+    Currency::JPY,
+    Currency::CNY,
+    Currency::AUD,
+    Currency::CAD,
+    Currency::CHF,
+    Currency::SEK,
+    Currency::NOK,
+    Currency::DKK,
+    Currency::NZD,
+    Currency::SGD,
+    Currency::HKD,
+    Currency::KRW,
+    Currency::TWD,
+    Currency::THB,
+    Currency::MYR,
+    Currency::IDR,
+    Currency::PHP,
+    Currency::VND,
+    Currency::PKR,
+    Currency::BDT,
+    Currency::LKR,
+    Currency::NPR,
+    Currency::AED,
+    Currency::SAR,
+    Currency::QAR,
+    Currency::KWD,
+    Currency::BHD,
+    Currency::OMR,
+    Currency::ILS,
+    Currency::TRY,
+    Currency::RUB,
+    Currency::UAH,
+    Currency::PLN,
+    Currency::CZK,
+    Currency::HUF,
+    Currency::RON,
+    Currency::BGN,
+    Currency::HRK,
+    Currency::RSD,
+    Currency::MXN,
+    Currency::BRL,
+    Currency::ARS,
+    Currency::CLP,
+    Currency::COP,
+    Currency::PEN,
+    Currency::ZAR,
+    Currency::NGN,
+    Currency::EGP,
+    Currency::MAD,
+    Currency::KES,
+    Currency::ETB];
+    pub fn title(self) -> &'static str {
+        match self{
+            Currency::USD => "USD",
+            Currency::EUR => "EUR",
+            Currency::GBP => "GBP",
+            Currency::INR => "INR",
+            Currency::JPY => "JPY",
+            Currency::CNY => "CNY",
+            Currency::AUD => "AUD",
+            Currency::CAD => "CAD",
+            Currency::CHF => "CHF",
+            Currency::SEK => "SEK",
+            Currency::NOK => "NOK",
+            Currency::DKK => "DKK",
+            Currency::NZD => "NZD",
+            Currency::SGD => "SGD",
+            Currency::HKD => "HKD",
+            Currency::KRW => "KRW",
+            Currency::TWD => "TWD",
+            Currency::THB => "THB",
+            Currency::MYR => "MYR",
+            Currency::IDR => "IDR",
+            Currency::PHP => "PHP",
+            Currency::VND => "VND",
+            Currency::PKR => "PKR",
+            Currency::BDT => "BDT",
+            Currency::LKR => "LKR",
+            Currency::NPR => "NPR",
+            Currency::AED => "AED",
+            Currency::SAR => "SAR",
+            Currency::QAR => "QAR",
+            Currency::KWD => "KWD",
+            Currency::BHD => "BHD",
+            Currency::OMR => "OMR",
+            Currency::ILS => "ILS",
+            Currency::TRY => "TRY",
+            Currency::RUB => "RUB",
+            Currency::UAH => "UAH",
+            Currency::PLN => "PLN",
+            Currency::CZK => "CZK",
+            Currency::HUF => "HUF",
+            Currency::RON => "RON",
+            Currency::BGN => "BGN",
+            Currency::HRK => "HRK",
+            Currency::RSD => "RSD",
+            Currency::MXN => "MXN",
+            Currency::BRL => "BRL",
+            Currency::ARS => "ARS",
+            Currency::CLP => "CLP",
+            Currency::COP => "COP",
+            Currency::PEN => "PEN",
+            Currency::ZAR => "ZAR",
+            Currency::NGN => "NGN",
+            Currency::EGP => "EGP",
+            Currency::MAD => "MAD",
+            Currency::KES => "KES",
+            Currency::ETB => "ETB",
+        }
+    }
+    pub fn next(self) -> Currency { let i = Self::ALL.iter().position(|c| *c == self).unwrap(); Self::ALL[(i + 1) % Self::ALL.len()] }
+    pub fn prev(self) -> Currency { let i = Self::ALL.iter().position(|c| *c == self).unwrap(); Self::ALL[(i + Self::ALL.len() - 1) % Self::ALL.len()] }
+}
+
 
 impl Default for Currency{
 fn default() -> Self {
