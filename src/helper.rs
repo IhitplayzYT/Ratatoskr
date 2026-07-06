@@ -14,7 +14,8 @@ pub mod Helper {
         pub port:u16,
         pub url: Option<String>,
         pub user: String,
-        pub password: Option<String>
+        pub password: Option<String>,
+        pub settings: Option<String>
     }
 
     impl CLI {
@@ -26,7 +27,8 @@ pub mod Helper {
                 port:3306,
                 url:None,
                 user:"root".to_string(),
-                password: None
+                password: None,
+                settings:None
             }
         }
 
@@ -61,6 +63,9 @@ pub mod Helper {
                 } else if i.starts_with("--url=") || i.starts_with("-u=") {
                     let idx = i.find("=").unwrap();
                     self.url = Some(i[idx + 1..].to_string());
+                } else if i.starts_with("--settings=") || i.starts_with("-s="){
+                    let idx = i.find("=").unwrap();
+                    self.settings = Some(i[idx + 1..].to_string());                   
                 }
                  else {
                     Help();

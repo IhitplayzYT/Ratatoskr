@@ -2,16 +2,14 @@
 
 pub mod Run{
     use std::io;
-use ratatui::Terminal;
+use ratatui::{Terminal, layout::Alignment, style::Stylize};
 use std::time::{Instant,Duration};
 
-use crate::model::app::App::{App, Color_channel, EditorMode, EditorState, Page, Pending, SettingsFocus, Theme_comp, Vim_mode, parse_autosave_duration};
+use crate::model::app::App::{App, Color_channel, EditorMode, EditorState, Page, Pending, SettingsFocus, Theme_comp, Vim_mode, parse_autosave_duration, parse_fmt_date};
  
-use crossterm::{
-    event::{
-        self, Event, KeyCode, KeyEvent, KeyEventKind, MouseEvent, MouseEventKind,
-    },
-};
+use crossterm::event::{
+        self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEvent, MouseEventKind,
+    };
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
@@ -161,9 +159,12 @@ fn handle_color_picker_field_key(app: &mut App, key: KeyEvent) {
  
 fn handle_settings_key(app: &mut App, key: KeyEvent) {
     if key.code == KeyCode::Char('q') && app.settings.settings_ui.focus != SettingsFocus::Timezone
-        && app.settings.settings_ui.focus != SettingsFocus::AutosaveFreq {
+        && app.settings.settings_ui.focus != SettingsFocus::AutosaveFreq && app.settings.settings_ui.focus != SettingsFocus::Datefmt{
         app.is_quit = true;
         return;
+    }
+    if key.code == KeyCode::Char('s') && key.modifiers.contains(KeyModifiers::CONTROL){
+        app.settings.save().unwrap();
     }
     match key.code {
         KeyCode::Up => { cycle_settings_focus(app, false); return; }
@@ -189,6 +190,19 @@ fn handle_settings_key(app: &mut App, key: KeyEvent) {
                 Some(secs) => { ui.autosave_freq_valid = true; app.settings.autosave_freq = secs; }
                 None => ui.autosave_freq_valid = false,
             }
+        },
+        SettingsFocus::Datefmt => {
+          let ui = &mut app.settings.settings_ui;
+          match key.code{
+          KeyCode::Char(c) => ui.date_fmt.push(c),
+          KeyCode::Backspace => {ui.date_fmt.pop();},
+          _ => {}
+          }
+          match parse_fmt_date(&ui.date_fmt){
+            Ok(x) => {ui.date_valid = true;app.settings.date_format = x;},
+            _ => ui.date_valid = false,
+          }
+
         }
         SettingsFocus::Currency => match key.code {
             KeyCode::Left => app.settings.currency = app.settings.currency.prev(),
@@ -203,12 +217,27 @@ fn handle_settings_key(app: &mut App, key: KeyEvent) {
                 _ => {}
             }
             app.settings.timezone = ui.timezone_input.clone(); // TODO: validate/map real IANA zones later
+        },
+        SettingsFocus::AutocompleteEnabled =>{
+            if matches!(key.code, KeyCode::Left | KeyCode::Right | KeyCode::Enter) {
+                app.settings.autocomplete = !app.settings.autocomplete;
+            }
+        },
+        SettingsFocus::ConfirmdeleteEnabled => {
+            if matches!(key.code, KeyCode::Left | KeyCode::Right | KeyCode::Enter) {
+                app.settings.confirm_delete = !app.settings.confirm_delete;
+            }
+        },
+        SettingsFocus::VimmodeEnabled => {
+            if matches!(key.code, KeyCode::Left | KeyCode::Right | KeyCode::Enter) {
+                app.settings.vim_mode = !app.settings.vim_mode;
+            }
         }
     }
 }
 
 fn cycle_settings_focus(app: &mut App, forward: bool) {
-    let order = [SettingsFocus::ColorPicker, SettingsFocus::AutosaveEnabled, SettingsFocus::AutosaveFreq, SettingsFocus::Currency, SettingsFocus::Timezone];
+    let order = [SettingsFocus::ColorPicker, SettingsFocus::AutosaveEnabled, SettingsFocus::AutosaveFreq,SettingsFocus::AutocompleteEnabled,SettingsFocus::VimmodeEnabled,SettingsFocus::ConfirmdeleteEnabled,SettingsFocus::Datefmt, SettingsFocus::Currency, SettingsFocus::Timezone];
     let i = order.iter().position(|f| *f == app.settings.settings_ui.focus).unwrap();
     let next = if forward { (i + 1) % order.len() } else { (i + order.len() - 1) % order.len() };
     app.settings.settings_ui.focus = order[next];
@@ -548,9 +577,9 @@ fn ui(f: &mut Frame, app: &mut App) {
 fn render_tabs(f: &mut Frame, area: Rect, app: &App) {
     let titles: Vec<Line> = Page::ALL.iter().map(|p| Line::from(p.title())).collect();
     let tabs = Tabs::new(titles)
-        .block(Block::default().borders(Borders::ALL).title("nav"))
+        .block(Block::default().borders(Borders::ALL).title("Nav"))
         .select(app.page.idx())
-        .highlight_style(Style::default().add_modifier(Modifier::BOLD).fg(Color::Yellow));
+        .highlight_style(Style::default().add_modifier(Modifier::BOLD).fg(app.settings.theme.secondary.to_color()));
     f.render_widget(tabs, area);
 }
  
@@ -574,7 +603,7 @@ fn render_home(f: &mut Frame, area: Rect, app: &App) {
 fn render_settings(f: &mut Frame, area: Rect, app: &App) {
     let rows = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Min(10), Constraint::Length(6)])
+        .constraints([Constraint::Min(10), Constraint::Length(10)])
         .split(area);
 
     let cols = Layout::default()
@@ -591,32 +620,55 @@ fn render_general_settings_fields(f: &mut Frame, area: Rect, app: &App) {
     let s = &app.settings;
     let ui = &s.settings_ui;
     let hl = |focused: bool| if focused {
-        Style::default().add_modifier(Modifier::BOLD | Modifier::REVERSED)
+        Style::default().add_modifier(Modifier::BOLD | Modifier::REVERSED).fg(app.settings.theme.fontfg.to_color()).bg(app.settings.theme.fontbg.to_color())
     } else { Style::default() };
 
-    let lines = vec![
-        Line::from(Span::styled(
-            format!("Autosave: {}", if s.autosave { "enabled" } else { "disabled" }),
-            hl(ui.focus == SettingsFocus::AutosaveEnabled),
-        )),
-        Line::from(Span::styled(
-            format!("Autosave every: {} ({}s){}", ui.autosave_freq_input, s.autosave_freq,
-                if ui.autosave_freq_valid { "" } else { " — unparsed" }),
-            hl(ui.focus == SettingsFocus::AutosaveFreq),
-        )),
-        Line::from(Span::styled(
-            format!("Currency: {}", s.currency.title()),
-            hl(ui.focus == SettingsFocus::Currency),
-        )),
-        Line::from(Span::styled(
-            format!("Timezone: {}", ui.timezone_input),
-            hl(ui.focus == SettingsFocus::Timezone),
-        )),
-    ];
+let lines = vec![
+    enabled_line("Autosave", s.autosave, ui.focus == SettingsFocus::AutosaveEnabled,&app),
+    Line::from(Span::styled(
+        format!("Autosave every: {} ({}s){}", ui.autosave_freq_input, s.autosave_freq,
+            if ui.autosave_freq_valid { "" } else { " — unparsed" }),
+        hl(ui.focus == SettingsFocus::AutosaveFreq),
+    )),
+    enabled_line("Autocomplete", s.autocomplete, ui.focus == SettingsFocus::AutocompleteEnabled,&app),
+    enabled_line("VimMode", s.vim_mode, ui.focus == SettingsFocus::VimmodeEnabled,&app),
+    enabled_line("ConfirmDelete", s.confirm_delete, ui.focus == SettingsFocus::ConfirmdeleteEnabled,&app),
+    Line::from(Span::styled(
+        format!("Date Format: {} ({}){}", ui.date_fmt, s.date_format,
+            if ui.date_valid { "" } else { " — unparsed" }),
+        hl(ui.focus == SettingsFocus::Datefmt),
+    )),
+    Line::from(Span::styled(
+        format!("Currency: {}", s.currency.title()),
+        hl(ui.focus == SettingsFocus::Currency),
+    )),
+    Line::from(Span::styled(
+        format!("Timezone: {}", ui.timezone_input),
+        hl(ui.focus == SettingsFocus::Timezone),
+    )),
+];
+
     let block = Paragraph::new(lines)
-        .block(Block::default().borders(Borders::ALL).title("General (↑/↓ field, ←/→ or type)"));
+        .block(Block::default().borders(Borders::ALL).title("General (↑/↓ field, ←/→ or type, Ctrl+S save)"));
     f.render_widget(block, area);
 }
+
+fn enabled_line(label: &str, enabled: bool, focused: bool,app:&App) -> Line<'static> {
+    let hl = |focused: bool| if focused {
+        Style::default().add_modifier(Modifier::BOLD | Modifier::REVERSED).fg(app.settings.theme.fontfg.to_color()).bg(app.settings.theme.fontbg.to_color())
+    } else { Style::default() };
+
+    let base = hl(focused);
+    let status_style = base
+        .fg(if enabled { Color::Green } else { Color::Red })
+        .add_modifier(Modifier::BOLD);
+
+    Line::from(vec![
+        Span::styled(format!("{label}: "), base),
+        Span::styled(if enabled { "Enabled" } else { "Disabled" }, status_style),
+    ])
+}
+
 
 fn render_theme_component_list(f: &mut Frame, area: Rect, app: &App) {
     let items: Vec<ListItem> = Theme_comp::ALL
@@ -634,8 +686,8 @@ fn render_theme_component_list(f: &mut Frame, area: Rect, app: &App) {
         .collect();
     let list = List::new(items).block(
         Block::default()
-            .borders(Borders::ALL)
-            .title("Theme components (↑/↓)"),
+            .borders(Borders::ALL).border_style(Style::default().fg(app.settings.theme.primary.to_color()))
+            .title(Span::styled("Theme components (↑/↓)",Style::default().fg(app.settings.theme.secondary.to_color()))).title_alignment(Alignment::Center)
     );
     f.render_widget(list, area);
 }
@@ -646,8 +698,8 @@ fn render_color_picker(f: &mut Frame, area: Rect, app: &App) {
     let color = picker.component.get(&app.settings.theme);
  
     let block = Block::default()
-        .borders(Borders::ALL)
-        .title(format!("{} — [ / ] field, type digits, Backspace to edit", picker.component.title()));
+        .borders(Borders::ALL).border_style(Style::default().fg(color.to_color()))
+        .title(Span::styled(format!(" {} — Use '[' and ']' to change channels, type for editing", picker.component.title()),Style::default().fg(app.settings.theme.primary.to_color())));
     f.render_widget(block, area);
  
     let inner = Rect {
@@ -667,20 +719,19 @@ fn render_color_picker(f: &mut Frame, area: Rect, app: &App) {
             Constraint::Min(1),
         ])
         .split(inner);
- 
-    render_channel_field(f, rows[0], "R", &picker.buffers[0], picker.selected == Color_channel::R, Color::Red);
-    render_channel_field(f, rows[1], "G", &picker.buffers[1], picker.selected == Color_channel::G, Color::Green);
-    render_channel_field(f, rows[2], "B", &picker.buffers[2], picker.selected == Color_channel::B, Color::Blue);
+    render_channel_field(f,&app, rows[0], "R", &picker.buffers[0], picker.selected == Color_channel::R, Color::Red);
+    render_channel_field(f,&app, rows[1], "G", &picker.buffers[1], picker.selected == Color_channel::G, Color::Green);
+    render_channel_field(f,&app, rows[2], "B", &picker.buffers[2], picker.selected == Color_channel::B, Color::Blue);
  
     let (r, g, b) = color.get_rgb();
-    let hex = Paragraph::new(format!("hex: #{r:02X}{g:02X}{b:02X}"));
+    let hex = Paragraph::new(format!("hex: #{r:02X}{g:02X}{b:02X}")).fg(color.to_color());
     f.render_widget(hex, rows[3]);
  
     let swatch = Block::default().style(Style::default().bg(color.to_color()));
     f.render_widget(swatch, rows[4]);
 }
  
-fn render_channel_field(f: &mut Frame, area: Rect, label: &str, buf: &str, focused: bool, color: Color) {
+fn render_channel_field(f: &mut Frame,app:&App, area: Rect, label: &str, buf: &str, focused: bool, color: Color) {
     let style = if focused {
         Style::default().fg(color).add_modifier(Modifier::BOLD | Modifier::REVERSED)
     } else {
@@ -689,7 +740,7 @@ fn render_channel_field(f: &mut Frame, area: Rect, label: &str, buf: &str, focus
     let line = Line::from(vec![
         Span::styled(format!("{label}: "), style),
         Span::styled(format!("[{buf:<3}]"), style),
-        if focused { Span::raw(" ←type digits") } else { Span::raw("") },
+        if focused { Span::styled(" ←type digits",Style::default().fg(app.settings.theme.accent.to_color())) } else { Span::raw("") },
     ]);
     f.render_widget(Paragraph::new(line), area);
 }

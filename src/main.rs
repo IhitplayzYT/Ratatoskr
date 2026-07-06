@@ -28,7 +28,7 @@ use ratatui::{
 
 use conversion::Conversion;
 
-use crate::model::app::App::App;
+use crate::model::app::App::{App, Settings};
 fn main() -> anyhow::Result<()> {
     let mut clargs = Helper::CLI::new();
     clargs.Parse_Args();
@@ -40,6 +40,9 @@ fn main() -> anyhow::Result<()> {
     
    
     let mut app = App::new(if let Some(x) = clargs.url {x} else {format!("mysql://{}:{}@localhost:{}/mydb",clargs.user,clargs.password.unwrap_or("".to_string()),clargs.port)});
+    if let Some(x) = clargs.settings{
+        app.settings.load(x);
+    }
 
     enable_raw_mode()?;
     let mut stdout = io::stdout();

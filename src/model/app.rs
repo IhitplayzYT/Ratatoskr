@@ -6,6 +6,7 @@ use std::{collections::{HashSet}, fs, hash::Hash, io};
 
 use crate::{db::Database::Database, model::{calendar::Calendar::Calendar_task, finance::Finance::Ledger, journal::Journal::Journal_task, meta::Meta::{MyColor, Tag}, notes::Note::Note_task, todo::Todo::Todo_task}};
 
+use chrono::{DateTime, Utc};
 use ratatui::layout::Rect;
 use rust_decimal::Decimal;
 use crate::Conversion::CONVERSION_RATES;
@@ -308,8 +309,8 @@ self.currency = other.currency;
 self.color_picker = other.color_picker;
 }
 
-pub fn load(&mut self,path:Option<String>) -> bool{
-self.set(serde_json::from_str::<Settings>(&fs::read_to_string(if let Some(x) = path {x} else{"settings.json".to_string()}).unwrap()).unwrap());
+pub fn load(&mut self,path:String) -> bool{
+self.set(serde_json::from_str::<Settings>(&fs::read_to_string(path).unwrap()).unwrap());
 true
 }
 
@@ -317,7 +318,7 @@ true
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq,Serialize,Deserialize)]
-pub enum SettingsFocus { ColorPicker, AutosaveEnabled, AutosaveFreq, Currency, Timezone }
+pub enum SettingsFocus { ColorPicker, AutosaveEnabled, AutosaveFreq,AutocompleteEnabled,VimmodeEnabled,ConfirmdeleteEnabled,Datefmt, Currency, Timezone}
 
 impl Default for SettingsFocus{
     fn default() -> Self {
@@ -332,7 +333,19 @@ pub struct SettingsUiState {
     pub focus: SettingsFocus, // impl Default -> ColorPicker
     pub autosave_freq_input: String, // raw typed text, e.g. "2 hr 30 min"
     pub autosave_freq_valid: bool,
+    pub autocomplete:bool,
+    pub vim_mod: bool,
+    pub confirm_delete:bool,
+    pub date_fmt: String,
+    pub date_valid:bool,
     pub timezone_input: String,
+}
+
+pub fn parse_fmt_date(fmtstr:&str) -> Result<String,std::fmt::Error>{
+    use std::fmt::Write;
+    let mut out = String::new();
+    write!(out, "{}", Utc::now().format(fmtstr))?;
+    Ok(out)
 }
 
 
@@ -374,23 +387,29 @@ pub struct Theme {
     pub success: MyColor,
     pub warning: MyColor,
     pub error: MyColor,
+    pub fontfg:MyColor,
+    pub fontbg:MyColor,
 }
 
 impl Default for Theme{
 fn default() -> Self {
-    Theme { primary: MyColor::Black, secondary: MyColor::White, accent: MyColor::BrightCyan, success: MyColor::BrightGreen, warning: MyColor::BrightYellow, error: MyColor::BrightRed }
+    Theme { primary: MyColor::RGB(200, 200, 200), secondary: MyColor::White, accent: MyColor::BrightCyan, success: MyColor::BrightGreen, warning: MyColor::BrightYellow, error: MyColor::BrightRed,fontbg:MyColor::Black,fontfg:MyColor::BrightWhite}
 }
 }
 
 impl Theme{
 
-pub fn new(prim:Option<MyColor>,sec:Option<MyColor>,acc:Option<MyColor>,succ:Option<MyColor>,warning:Option<MyColor>,err:Option<MyColor>) -> Theme {
+pub fn new(prim:Option<MyColor>,sec:Option<MyColor>,acc:Option<MyColor>,succ:Option<MyColor>,warning:Option<MyColor>,err:Option<MyColor>,fg:Option<MyColor>,bg:Option<MyColor>) -> Theme {
 Self { primary: if let Some(x) = prim  {x} else{MyColor::Black},
        secondary: if let Some(x) = sec {x} else{MyColor::White},
        accent:  if let Some(x) = acc {x} else{MyColor::BrightCyan},
        success:  if let Some(x) = succ {x} else{MyColor::BrightGreen}, 
        warning:  if let Some(x) = warning {x} else{MyColor::BrightYellow},
-       error:  if let Some(x) = err {x} else{MyColor::BrightRed} }
+       error:  if let Some(x) = err {x} else{MyColor::BrightRed},
+       fontfg: fg.unwrap_or(MyColor::BrightWhite),
+       fontbg: bg.unwrap_or(MyColor::Black),
+    }
+       
 }
 
 pub fn Save(&self) -> io::Result<()>{
@@ -404,6 +423,8 @@ self.accent = new_t.accent;
 self.success = new_t.success;
 self.warning = new_t.warning;
 self.error = new_t.error;
+self.fontfg = new_t.fontfg;
+self.fontbg = new_t.fontbg;
 }
 
 pub fn Load(&mut self,conf_path: Option<String>){
@@ -421,16 +442,20 @@ pub enum Theme_comp {
     Success,
     Warning,
     Error,
+    FontFG,
+    FontBG
 }
  
 impl Theme_comp {
-    pub const ALL: [Theme_comp; 6] = [
+    pub const ALL: [Theme_comp; 8] = [
         Theme_comp::Primary,
         Theme_comp::Secondary,
         Theme_comp::Accent,
         Theme_comp::Success,
         Theme_comp::Warning,
         Theme_comp::Error,
+        Theme_comp::FontFG,
+        Theme_comp::FontBG,
     ];
  
     pub fn title(self) -> &'static str {
@@ -441,6 +466,8 @@ impl Theme_comp {
             Theme_comp::Success => "Success",
             Theme_comp::Warning => "Warning",
             Theme_comp::Error => "Error",
+            Theme_comp::FontFG => "FontFG",
+            Theme_comp::FontBG => "FontBG",
         }
     }
  
@@ -452,6 +479,8 @@ impl Theme_comp {
             Theme_comp::Success => theme.success,
             Theme_comp::Warning => theme.warning,
             Theme_comp::Error => theme.error,
+            Theme_comp::FontFG => theme.fontfg,
+            Theme_comp::FontBG => theme.fontbg,
         }
     }
  
@@ -463,6 +492,8 @@ impl Theme_comp {
             Theme_comp::Success => &mut theme.success,
             Theme_comp::Warning => &mut theme.warning,
             Theme_comp::Error => &mut theme.error,
+            Theme_comp::FontBG => &mut theme.fontbg,
+            Theme_comp::FontFG => &mut theme.fontfg,
         };
         *slot = c;
     }
