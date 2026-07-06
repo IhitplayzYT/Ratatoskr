@@ -167,7 +167,7 @@ pub fn load_journal_task(&self,jt_id:Uuid) -> mysql::Result<Option<Journal_task>
         std::process::exit(2);
     }
 
-    ret[0].tags = self.load_tags(&mut tx, "Journal",jt_id)?.into_iter().collect::<HashSet<Tag>>();
+    ret[0].tags = self.load_tags(&mut tx, "Journal",jt_id)?;
 tx.commit()?;
 Ok(Some(ret[0].clone()))
 }
@@ -186,7 +186,7 @@ pub fn load_all_journal_task(&self) -> mysql::Result<Vec<Journal_task>>{
         k
     })?;
     for k in &mut ret{
-        k.tags = self.load_tags(&mut tx,"Journal",k.id).unwrap().into_iter().collect::<HashSet<Tag>>();
+        k.tags = self.load_tags(&mut tx,"Journal",k.id)?;
     }
 
 
@@ -219,7 +219,7 @@ ret.append(&mut k);
 });
 
 for k in &mut ret{
-    k.tags = self.load_tags(&mut tx, "Journal", k.id).unwrap().into_iter().collect::<HashSet<Tag>>();
+    k.tags = self.load_tags(&mut tx, "Journal", k.id)?;
 }
 
 tx.commit()?;
@@ -244,7 +244,7 @@ SELECT * FROM Journal_tasks t WHERE t.member = ?;
 ret.append(&mut k);
 
 for k in &mut ret{
-    k.tags = self.load_tags(&mut tx, "Journal", k.id).unwrap().into_iter().collect::<HashSet<Tag>>();
+    k.tags = self.load_tags(&mut tx, "Journal", k.id)?;
 }
 
 tx.commit()?;
@@ -268,7 +268,7 @@ SELECT * FROM Journal_tasks t WHERE t.topic = ?;
 ret.append(&mut k);
 
 for k in &mut ret{
-    k.tags = self.load_tags(&mut tx, "Journal", k.id).unwrap().into_iter().collect::<HashSet<Tag>>();
+    k.tags = self.load_tags(&mut tx, "Journal", k.id)?;
 }
 
 tx.commit()?;
@@ -314,6 +314,17 @@ pub fn add_tag(&self,conn:&mut impl Queryable,tag: &Tag) -> mysql::Result<()>{
     INSERT IGNORE INTO tags(name,color) VALUES(?,?);
     ", (&tag.name,tag.color.rgb_str(),))?;
     Ok(())
+}
+
+pub fn load_all_tags(&self) -> mysql::Result<Vec<Tag>>{
+    let mut conn = self.conn()?;
+    let ret = conn.exec_map("SELECT * FROM tags;", (), |(_id,name,color):(String,String,String)|{
+        let (r,g,b) = (&color[0..2],&color[2..4],&color[4..6]);
+        Tag::new(name, Some(
+            MyColor::RGB(u8::from_str_radix(r, 16).unwrap(), u8::from_str_radix(g, 16).unwrap(), u8::from_str_radix(b, 16).unwrap())
+        ))    
+    })?;
+    Ok(ret)
 }
 
 
@@ -449,7 +460,7 @@ pub fn load_note_task(&self,jt_id:Uuid) -> mysql::Result<Option<Note_task>>{
     }
 
     ret[0].id = jt_id;
-    ret[0].tags = self.load_tags(&mut tx, "Note",jt_id)?.into_iter().collect::<HashSet<Tag>>();
+    ret[0].tags = self.load_tags(&mut tx, "Note",jt_id)?;
 tx.commit()?;
 Ok(Some(ret[0].clone()))
 }
@@ -468,7 +479,7 @@ pub fn load_all_note_task(&self) -> mysql::Result<Vec<Note_task>>{
         k
     })?;
     for k in &mut ret{
-        k.tags = self.load_tags(&mut tx,"Note",k.id).unwrap().into_iter().collect::<HashSet<Tag>>();
+        k.tags = self.load_tags(&mut tx,"Note",k.id)?;
     }
 
 
@@ -501,7 +512,7 @@ ret.append(&mut k);
 });
 
 for k in &mut ret{
-    k.tags = self.load_tags(&mut tx, "Note", k.id).unwrap().into_iter().collect::<HashSet<Tag>>();
+    k.tags = self.load_tags(&mut tx, "Note", k.id)?;
 }
 
 tx.commit()?;
@@ -526,7 +537,7 @@ SELECT * FROM Note_tasks t WHERE t.member = ?;
 ret.append(&mut k);
 
 for k in &mut ret{
-    k.tags = self.load_tags(&mut tx, "Note", k.id).unwrap().into_iter().collect::<HashSet<Tag>>();
+    k.tags = self.load_tags(&mut tx, "Note", k.id)?;
 }
 
 tx.commit()?;
@@ -551,7 +562,7 @@ SELECT * FROM Note_tasks t WHERE t.topic = ?;
 ret.append(&mut k);
 
 for k in &mut ret{
-    k.tags = self.load_tags(&mut tx, "Note", k.id).unwrap().into_iter().collect::<HashSet<Tag>>();
+    k.tags = self.load_tags(&mut tx, "Note", k.id)?;
 }
 
 tx.commit()?;
@@ -693,7 +704,7 @@ pub fn load_todo_task(&self,jt_id:Uuid) -> mysql::Result<Option<Todo_task>>{
         std::process::exit(2);
     }
 
-    ret[0].tags = self.load_tags(&mut tx, "Todo",jt_id)?.into_iter().collect::<HashSet<Tag>>();
+    ret[0].tags = self.load_tags(&mut tx, "Todo",jt_id)?;
 tx.commit()?;
 Ok(Some(ret[0].clone()))
 }
@@ -714,7 +725,7 @@ pub fn load_all_todo_task(&self) -> mysql::Result<Vec<Todo_task>>{
         k
     })?;
     for k in &mut ret{
-        k.tags = self.load_tags(&mut tx,"Todo",k.id).unwrap().into_iter().collect::<HashSet<Tag>>();
+        k.tags = self.load_tags(&mut tx,"Todo",k.id)?;
     }
 
 tx.commit()?;
@@ -748,7 +759,7 @@ ret.append(&mut k);
 });
 
 for k in &mut ret{
-    k.tags = self.load_tags(&mut tx, "Todo", k.id).unwrap().into_iter().collect::<HashSet<Tag>>();
+    k.tags = self.load_tags(&mut tx, "Todo", k.id)?;
 }
 
 tx.commit()?;
@@ -775,7 +786,7 @@ SELECT * FROM Todo_tasks t WHERE t.member = ?;
 ret.append(&mut k);
 
 for k in &mut ret{
-    k.tags = self.load_tags(&mut tx, "Todo", k.id).unwrap().into_iter().collect::<HashSet<Tag>>();
+    k.tags = self.load_tags(&mut tx, "Todo", k.id)?;
 }
 
 tx.commit()?;
@@ -802,7 +813,7 @@ SELECT * FROM Todo_tasks t WHERE t.topic = ?;
 ret.append(&mut k);
 
 for k in &mut ret{
-    k.tags = self.load_tags(&mut tx, "Todo", k.id).unwrap().into_iter().collect::<HashSet<Tag>>();
+    k.tags = self.load_tags(&mut tx, "Todo", k.id)?;
 }
 
 tx.commit()?;

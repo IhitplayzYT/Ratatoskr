@@ -296,7 +296,7 @@ pub fn new(name:String,color:Option<MyColor>)-> Self{
 }
 }
 
-#[derive(Debug,PartialEq, Eq,Clone, Copy)]
+#[derive(Debug,PartialEq, Eq,Clone, Copy,Hash)]
 pub enum Duration{
 SECONDS(u8),
 MIN(u8),
@@ -378,7 +378,7 @@ pub fn from_raw_str(dur:&str) ->Self{
 }
 
 
-#[derive(Debug,PartialEq, Eq,Clone, Copy)]
+#[derive(Debug,PartialEq, Eq,Clone, Copy,Hash)]
 pub enum Frequency{
 Once,
 SECONDS(u8),

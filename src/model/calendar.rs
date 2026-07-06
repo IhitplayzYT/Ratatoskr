@@ -8,7 +8,7 @@ use crate::model::meta::Meta::MyColor;
     use crate::model::meta::Meta::{Duration,Frequency};
 
 
-    
+   #[derive(Debug,PartialEq,Eq,Clone,Hash)] 
 pub struct Calendar_task{
     pub id:Uuid,
     pub event: String,

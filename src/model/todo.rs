@@ -7,7 +7,7 @@ use uuid::Uuid;
     use chrono::{DateTime,Utc};
     use crate::model::meta::Meta::{Tag,Priority}; 
 
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone,Hash,PartialEq, Eq)]
 pub struct Todo_task {
     pub id: Uuid,
     pub title: String,
@@ -17,7 +17,7 @@ pub struct Todo_task {
     pub due_date: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub completed_at: Option<DateTime<Utc>>,
-    pub tags: HashSet<Tag>,
+    pub tags: Vec<Tag>,
     pub topic: Option<String>,
     pub member: Option<String>,
 }
@@ -33,7 +33,7 @@ impl Todo_task{
             due_date,
             created_at:Utc::now(),
             completed_at:None,
-            tags:tags.into_iter().collect::<HashSet<Tag>>(),
+            tags,
             topic,
             member
         }
@@ -56,10 +56,10 @@ impl Todo_task{
         }
 
         pub fn add_tag(&mut self,t:Tag) {
-            self.tags.insert(t);
+            self.tags.push(t);
         }
         pub fn add_tags(&mut self,t:Vec<Tag>) {
-            t.into_iter().for_each(|y| {self.tags.insert(y);});
+            t.into_iter().for_each(|y| {self.tags.push(y);});
         }
 
 

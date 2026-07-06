@@ -5,7 +5,7 @@ pub mod Run{
 use ratatui::{Terminal, layout::Alignment, style::Stylize};
 use std::time::{Instant,Duration};
 
-use crate::model::app::App::{App, Color_channel, EditorMode, EditorState, Page, Pending, SettingsFocus, Theme_comp, Vim_mode, parse_autosave_duration, parse_fmt_date};
+use crate::model::app::App::{App, Color_channel, EditorMode, EditorState, Page, Pending, PomoFocus, SettingsFocus, Theme_comp, Vim_mode, parse_autosave_duration, parse_fmt_date};
  
 use crossterm::event::{
         self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEvent, MouseEventKind,
@@ -46,13 +46,139 @@ pub fn run_app<B: ratatui::backend::Backend>(
         if last_tick.elapsed() >= tick_rate {
             last_tick = Instant::now();
         }
- 
+        tick_pomodoro(app);
+
         if app.is_quit {
             return Ok(());
         }
     }
 }
  
+fn tick_pomodoro(app: &mut App) {
+    let pomo = &mut app.features.pomodero;
+    if !pomo.running || pomo.paused {
+        // reset the reference point so we don't "catch up" a bunch of
+        // seconds the moment it's resumed
+        app.pomo_last_second = Instant::now();
+        return;
+    }
+
+    if app.pomo_last_second.elapsed() >= Duration::from_secs(1) {
+        app.pomo_last_second = Instant::now();
+        if pomo.duration_left > 0 {
+            pomo.duration_left -= 1;
+        }
+        if pomo.duration_left == 0 {
+            pomo.running = false;
+            pomo.paused = false;
+            // TODO: fire a notification / sound / session-complete event here
+        }
+    }
+}
+
+fn handle_pomodoro_key(app: &mut App, key: KeyEvent) {
+    if key.code == KeyCode::Char('q') {
+        app.is_quit = true;
+        return;
+    }
+
+    let pomo = &mut app.features.pomodero;
+
+    match key.code {
+        KeyCode::Left => {
+            pomo.focus = prev_pomo_focus(pomo.focus);
+            return;
+        }
+        KeyCode::Right => {
+            pomo.focus = next_pomo_focus(pomo.focus);
+            return;
+        }
+        _ => {}
+    }
+
+    match pomo.focus {
+        PomoFocus::Hour | PomoFocus::Minute | PomoFocus::Second => {
+            // only editable while not actively running (pause is fine? -> here we lock while running)
+            if pomo.running {
+                return;
+            }
+            match key.code {
+                KeyCode::Up => bump_pomo_component(pomo, pomo.focus, 1),
+                KeyCode::Down => bump_pomo_component(pomo, pomo.focus, -1),
+                _ => {}
+            }
+        }
+        PomoFocus::StartPause => {
+            if matches!(key.code, KeyCode::Enter | KeyCode::Char(' ')) {
+                if !pomo.running {
+                    pomo.running = true;
+                    pomo.paused = false;
+                    app.pomo_last_second = Instant::now();
+                } else if pomo.paused {
+                    pomo.paused = false;
+                    app.pomo_last_second = Instant::now();
+                } else {
+                    pomo.paused = true;
+                }
+            }
+        }
+        PomoFocus::Reset => {
+            if matches!(key.code, KeyCode::Enter | KeyCode::Char(' ')) {
+                pomo.duration_left = pomo.duration;
+                app.pomo_last_second = Instant::now();
+            }
+        }
+        PomoFocus::Cancel => {
+            if matches!(key.code, KeyCode::Enter | KeyCode::Char(' ')) {
+                pomo.running = false;
+                pomo.paused = false;
+                pomo.duration_left = pomo.duration;
+            }
+        }
+    }
+}
+
+fn bump_pomo_component(pomo: &mut crate::model::pomodero::Pomodero::Pomodero, focus: PomoFocus, delta: i64) {
+    let mut h = (pomo.duration / 3600) as i64;
+    let mut m = ((pomo.duration % 3600) / 60) as i64;
+    let mut s = (pomo.duration % 60) as i64;
+
+    match focus {
+        PomoFocus::Hour => h = (h + delta).rem_euclid(24),
+        PomoFocus::Minute => m = (m + delta).rem_euclid(60),
+        PomoFocus::Second => s = (s + delta).rem_euclid(60),
+        _ => {}
+    }
+
+    pomo.duration = (h * 3600 + m * 60 + s) as usize;
+    pomo.duration_left = pomo.duration;
+}
+
+
+
+fn next_pomo_focus(f: PomoFocus) -> PomoFocus {
+    match f {
+        PomoFocus::Hour => PomoFocus::Minute,
+        PomoFocus::Minute => PomoFocus::Second,
+        PomoFocus::Second => PomoFocus::StartPause,
+        PomoFocus::StartPause => PomoFocus::Reset,
+        PomoFocus::Reset => PomoFocus::Cancel,
+        PomoFocus::Cancel => PomoFocus::Hour,
+    }
+}
+
+fn prev_pomo_focus(f: PomoFocus) -> PomoFocus {
+    match f {
+        PomoFocus::Hour => PomoFocus::Cancel,
+        PomoFocus::Minute => PomoFocus::Hour,
+        PomoFocus::Second => PomoFocus::Minute,
+        PomoFocus::StartPause => PomoFocus::Second,
+        PomoFocus::Reset => PomoFocus::StartPause,
+        PomoFocus::Cancel => PomoFocus::Reset,
+    }
+}
+
+
 // ---------------------------------------------------------------------------
 // input handling
 // ---------------------------------------------------------------------------
@@ -83,6 +209,7 @@ fn handle_key(app: &mut App, key: KeyEvent) {
  
     match app.page {
         Page::Settings => handle_settings_key(app, key),
+        Page::Pomodoro => handle_pomodoro_key(app, key),
         Page::Home => {
             if key.code == KeyCode::Char('q') {
                 app.is_quit = true;
@@ -566,12 +693,217 @@ fn ui(f: &mut Frame, app: &mut App) {
  
     match app.page {
         Page::Home => render_home(f, root[1], app),
+        Page::Pomodoro => render_pomodoro(f, root[1], app),
         Page::Settings => render_settings(f, root[1], app),
         _ => {
             app.last_editor_section = root[1];
             render_editor_canvas(f, root[1], &app.editor, app.page.title());
         }
     }
+}
+
+fn render_pomodoro(f: &mut Frame, area: Rect, app: &App) {
+    let pomo = &app.features.pomodero;
+
+    let rows = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(9), Constraint::Length(3)])
+        .split(area);
+
+    if pomo.running {
+        render_pomo_running(f, rows[0], app);
+    } else {
+        render_pomo_wheels(f, rows[0], app);
+    }
+
+    render_pomo_buttons(f, rows[1], app);
+}
+
+
+fn render_pomo_wheels(f: &mut Frame, area: Rect, app: &App) {
+    let pomo = &app.features.pomodero;
+    let color = pomo.color.to_color();
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(color))
+        .title(Span::styled(
+            format!(" Pomodoro — {} ", pomo.format_time_left()),
+            Style::default().fg(color).add_modifier(Modifier::BOLD),
+        ))
+        .title_alignment(Alignment::Center);
+    f.render_widget(block, area);
+
+    let inner = Rect {
+        x: area.x + 1,
+        y: area.y + 1,
+        width: area.width.saturating_sub(2),
+        height: area.height.saturating_sub(2),
+    };
+
+    let cols = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage(33),
+            Constraint::Percentage(34),
+            Constraint::Percentage(33),
+        ])
+        .split(inner);
+
+    let h = (pomo.duration_left / 3600) as i64;
+    let m = ((pomo.duration_left % 3600) / 60) as i64;
+    let s = (pomo.duration_left % 60) as i64;
+
+    render_pomo_wheel(f, cols[0], "HOUR", h, 24, pomo.focus == PomoFocus::Hour, color);
+    render_pomo_wheel(f, cols[1], "MIN", m, 60, pomo.focus == PomoFocus::Minute, color);
+    render_pomo_wheel(f, cols[2], "SEC", s, 60, pomo.focus == PomoFocus::Second, color);
+}
+
+fn render_pomo_running(f: &mut Frame, area: Rect, app: &App) {
+    let pomo = &app.features.pomodero;
+    let color = pomo.color.to_color();
+
+    let status = if pomo.paused { "PAUSED" } else { "RUNNING" };
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(color))
+        .title(Span::styled(
+            format!(" Pomodoro — {status} "),
+            Style::default().fg(color).add_modifier(Modifier::BOLD),
+        ))
+        .title_alignment(Alignment::Center);
+    f.render_widget(block, area);
+
+    let inner = Rect {
+        x: area.x + 1,
+        y: area.y + 1,
+        width: area.width.saturating_sub(2),
+        height: area.height.saturating_sub(2),
+    };
+
+    let text = pomo.format_time_left();
+
+    // figlet glyphs are 5 rows tall, 6 cols wide per char (5 + 1 spacing)
+    let big_height = 5u16;
+    let big_width = (text.chars().count() as u16) * 6;
+
+    let v_pad = inner.height.saturating_sub(big_height) / 2;
+    let h_pad = inner.width.saturating_sub(big_width) / 2;
+
+    let centered = Rect {
+        x: inner.x + h_pad,
+        y: inner.y + v_pad,
+        width: big_width.min(inner.width),
+        height: big_height.min(inner.height),
+    };
+
+    let dim = pomo.paused; // dim the digits while paused, still centered
+    render_big_time(f, centered, &text, color, !dim);
+}
+
+fn render_pomo_wheel(f: &mut Frame, area: Rect, label: &str, value: i64, modulus: i64, focused: bool, color: Color) {
+    let prev = (value - 1).rem_euclid(modulus);
+    let next = (value + 1).rem_euclid(modulus);
+
+    let dim = Style::default().add_modifier(Modifier::DIM);
+    let cur_style = if focused {
+        Style::default().fg(color).add_modifier(Modifier::BOLD | Modifier::REVERSED)
+    } else {
+        Style::default().fg(color).add_modifier(Modifier::BOLD)
+    };
+
+    let lines = vec![
+        Line::from(Span::styled(format!("{prev:02}"), dim)).alignment(Alignment::Center),
+        Line::from(Span::styled(format!("{value:02}"), cur_style)).alignment(Alignment::Center),
+        Line::from(Span::styled(format!("{next:02}"), dim)).alignment(Alignment::Center),
+        Line::from(""),
+        Line::from(Span::styled(label, Style::default().fg(color))).alignment(Alignment::Center),
+    ];
+
+    f.render_widget(Paragraph::new(lines), area);
+}
+
+fn render_pomo_buttons(f: &mut Frame, area: Rect, app: &App) {
+    let pomo = &app.features.pomodero;
+    let color = pomo.color.to_color();
+
+    let cols = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage(34),
+            Constraint::Percentage(33),
+            Constraint::Percentage(33),
+        ])
+        .split(area);
+
+    let start_pause_label = if !pomo.running {
+        "Start"
+    } else if pomo.paused {
+        "Resume"
+    } else {
+        "Pause"
+    };
+
+    render_pomo_button(f, cols[0], start_pause_label, pomo.focus == PomoFocus::StartPause, color);
+    render_pomo_button(f, cols[1], "Reset", pomo.focus == PomoFocus::Reset, color);
+    render_pomo_button(f, cols[2], "Cancel", pomo.focus == PomoFocus::Cancel, color);
+}
+
+/// 5-row block-digit font for 0-9 and ':'.
+fn big_digit_rows(c: char) -> [&'static str; 5] {
+    match c {
+        '0' => [" ███ ", "█   █", "█   █", "█   █", " ███ "],
+        '1' => ["  █  ", " ██  ", "  █  ", "  █  ", " ███ "],
+        '2' => [" ███ ", "█   █", "  ██ ", " █   ", "█████"],
+        '3' => ["████ ", "    █", "  ██ ", "    █", "████ "],
+        '4' => ["█   █", "█   █", "█████", "    █", "    █"],
+        '5' => ["█████", "█    ", "████ ", "    █", "████ "],
+        '6' => [" ███ ", "█    ", "████ ", "█   █", " ███ "],
+        '7' => ["█████", "    █", "   █ ", "  █  ", "  █  "],
+        '8' => [" ███ ", "█   █", " ███ ", "█   █", " ███ "],
+        '9' => [" ███ ", "█   █", " ████", "    █", " ███ "],
+        ':' => ["     ", "  █  ", "     ", "  █  ", "     "],
+        _   => ["     ", "     ", "     ", "     ", "     "],
+    }
+}
+
+/// Renders `text` (digits/colons only) as figlet-style block art.
+fn render_big_time(f: &mut Frame, area: Rect, text: &str, color: Color, bold: bool) {
+    let mut row_strs: [String; 5] = Default::default();
+    for c in text.chars() {
+        let glyph = big_digit_rows(c);
+        for i in 0..5 {
+            row_strs[i].push_str(glyph[i]);
+            row_strs[i].push(' '); // spacing between characters
+        }
+    }
+
+    let style = if bold {
+        Style::default().fg(color).add_modifier(Modifier::BOLD)
+    } else {
+        Style::default().fg(color)
+    };
+
+    let lines: Vec<Line> = row_strs
+        .iter()
+        .map(|r| Line::from(Span::styled(r.clone(), style)).alignment(Alignment::Center))
+        .collect();
+
+    f.render_widget(Paragraph::new(lines), area);
+}
+
+fn render_pomo_button(f: &mut Frame, area: Rect, label: &str, focused: bool, color: Color) {
+    let style = if focused {
+        Style::default().fg(color).add_modifier(Modifier::BOLD | Modifier::REVERSED)
+    } else {
+        Style::default().fg(color)
+    };
+    let block = Block::default().borders(Borders::ALL).border_style(style);
+    let text = Paragraph::new(Line::from(Span::styled(format!(" {label} "), style)))
+        .alignment(Alignment::Center)
+        .block(block);
+    f.render_widget(text, area);
 }
  
 fn render_tabs(f: &mut Frame, area: Rect, app: &App) {

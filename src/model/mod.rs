@@ -5,3 +5,4 @@ pub mod meta;
 pub mod app;
 pub mod calendar;
 pub mod finance;
+pub mod pomodero;

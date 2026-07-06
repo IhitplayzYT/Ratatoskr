@@ -8,7 +8,7 @@ mod run;
 
 use helper::Helper;
 use run::Run;
-use std::io;
+use std::{io, time::Instant};
 use std::time::Duration;
  
 use crossterm::{
@@ -44,11 +44,32 @@ fn main() -> anyhow::Result<()> {
         app.settings.load(x);
     }
 
+//    for i in app.db.load_all_tags()?{
+//        app.features.tags.insert(i);
+//    }
+//    for i in app.db.load_all_journal_task()?{
+//        app.features.journals.insert(i);
+//    }
+//    for i in app.db.load_all_note_task()?{
+//        app.features.notes.insert(i);
+//    }
+//    for i in app.db.load_all_todo_task()?{
+//        app.features.todos.insert(i);
+//    }
+//    for i in app.db.get_events()?{
+//        app.features.calendars.insert(i);
+//    }
+//    app.features.finance = app.db.load_ledger()?;   
+
+    // TODO: Add pomodero qnd Calorie tracker
+
+
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout,EnterAlternateScreen,EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
+    app.pomo_last_second = Instant::now();
     let tick_rate = Duration::from_millis(100);
     let ret = Run::run_app(&mut terminal,&mut app,tick_rate);
     disable_raw_mode()?;

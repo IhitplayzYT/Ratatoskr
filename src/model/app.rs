@@ -1,12 +1,12 @@
 #[allow(dead_code,non_camel_case_types,non_snake_case)]
 
 pub mod App{
-use std::{collections::{HashSet}, fs, hash::Hash, io};
+use std::{collections::HashSet, fs, hash::Hash, io, time::Instant};
 
 
-use crate::{db::Database::Database, model::{calendar::Calendar::Calendar_task, finance::Finance::Ledger, journal::Journal::Journal_task, meta::Meta::{MyColor, Tag}, notes::Note::Note_task, todo::Todo::Todo_task}};
+use crate::{db::Database::Database, model::{calendar::Calendar::Calendar_task, finance::Finance::Ledger, journal::Journal::Journal_task, meta::Meta::{MyColor, Tag}, notes::Note::Note_task, pomodero::Pomodero, todo::Todo::Todo_task}};
 
-use chrono::{DateTime, Utc};
+use chrono::{Utc};
 use ratatui::layout::Rect;
 use rust_decimal::Decimal;
 use crate::Conversion::CONVERSION_RATES;
@@ -19,13 +19,14 @@ pub struct Feature_set {
     pub finance: Ledger,
     pub calendars: HashSet<Calendar_task>,
     pub tags: HashSet<Tag>,
+    pub pomodero:Pomodero::Pomodero,
 }
 
 // TODO: LOAD THESE FEATURES FROM DB
 
 impl Default for Feature_set{
     fn default() -> Self {
-        Self { todos: HashSet::new(), notes: HashSet::new(), journals: HashSet::new(), finance: Ledger::new(), calendars: HashSet::new(), tags: HashSet::new() }
+        Self { todos: HashSet::new(), notes: HashSet::new(), journals: HashSet::new(), finance: Ledger::new(), calendars: HashSet::new(), tags: HashSet::new() ,pomodero:Pomodero::Pomodero::default()}
     }
 
 }
@@ -39,7 +40,8 @@ pub struct App {
     pub page:Page,
     pub editor:EditorState,
     pub last_editor_section: Rect,
-    pub is_quit: bool
+    pub is_quit: bool,
+    pub pomo_last_second: std::time::Instant,
 }
 
 impl App {
@@ -52,6 +54,7 @@ impl App {
             editor: EditorState::default(),
             last_editor_section:Rect::default(),
             is_quit: false,
+            pomo_last_second:Instant::now()
         }
     }
 }
@@ -65,16 +68,18 @@ pub enum Page{
     Todo,
     Calendar,
     Finance,
+    Pomodoro,
     Settings
 }
 
 impl Page{
-    pub const ALL:[Page;7] = [
+    pub const ALL:[Page;8] = [
         Page::Home,
         Page::Journal,
         Page::Note,
         Page::Todo,
         Page::Calendar,
+        Page::Pomodoro,
         Page::Finance,
         Page::Settings,
     ];
@@ -86,6 +91,7 @@ impl Page{
             Page::Note => "Note",
             Page::Todo => "Todo",
             Page::Calendar => "Calendar",
+            Page::Pomodoro => "Pomodoro",
             Page::Finance => "Finance",
             Page::Settings => "Settings",
         }
@@ -98,19 +104,21 @@ impl Page{
             Page::Note => 2,
             Page::Todo => 3,
             Page::Calendar => 4,
-            Page::Finance => 5,
-            Page::Settings => 6,
+            Page::Pomodoro => 5,
+            Page::Finance => 6,
+            Page::Settings => 7,
         }
     }
 
     pub fn from_idx(i: usize) -> Page {
-        match i % 7 {
+        match i % 8 {
             0 => Page::Home,
             1 => Page::Journal,
             2 => Page::Note,
             3 => Page::Todo,
             4 => Page::Calendar,
-            5 => Page::Finance,
+            5 => Page::Pomodoro,
+            6 => Page::Finance,
             _ => Page::Settings,
         }
     }
@@ -160,6 +168,69 @@ pub enum Pending {
     R,  // replacement char
 }
  
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
+pub enum PomoFocus {
+    Hour,
+    Minute,
+    Second,
+    StartPause,
+    Reset,
+    Cancel,
+}
+
+
+impl PomoFocus{
+    const ALL:[PomoFocus;6] = [
+    PomoFocus::Hour,
+    PomoFocus::Minute,
+    PomoFocus::Second,
+    PomoFocus::StartPause,
+    PomoFocus::Reset,
+    PomoFocus::Cancel,
+    ];
+
+    pub fn title(&self) -> String{
+        match self{
+    PomoFocus::Hour => "Hour",
+    PomoFocus::Minute => "Minute",
+    PomoFocus::Second => "Second",
+    PomoFocus::StartPause => "Start/Pause",
+    PomoFocus::Reset => "Reset",
+    PomoFocus::Cancel => "Cancel",   
+        }.to_string()
+    }
+
+    pub fn idx(&self) -> usize{
+        match self{
+    PomoFocus::Hour => 0,
+    PomoFocus::Minute => 1,
+    PomoFocus::Second => 2,
+    PomoFocus::StartPause => 3,
+    PomoFocus::Reset => 4,
+    PomoFocus::Cancel => 5,
+
+        }
+    }
+
+    pub fn from_idx(&self,idx:usize) -> Self{
+        match idx{
+        0 => PomoFocus::Hour,
+        1 => PomoFocus::Minute,
+        2 => PomoFocus::Second,
+        3 => PomoFocus::StartPause,
+        4 => PomoFocus::Reset,
+        5 => PomoFocus::Cancel,
+        _ => PomoFocus::Cancel
+        }
+    }
+
+    pub fn next(self) -> PomoFocus { let i = Self::ALL.iter().position(|c| *c == self).unwrap(); Self::ALL[(i + 1) % Self::ALL.len()] }
+    pub fn prev(self) -> PomoFocus { let i = Self::ALL.iter().position(|c| *c == self).unwrap(); Self::ALL[(i + Self::ALL.len() - 1) % Self::ALL.len()] }
+
+}
+
+
+
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Vimstate {
