@@ -1,0 +1,46 @@
+{
+  "color_picker": {
+    "selected": "R",
+    "component": "Primary",
+    "buffers": [
+      "20",
+      "200",
+      "200"
+    ]
+  },
+  "theme": {
+    "primary": {
+      "RGB": [
+        20,
+        200,
+        200
+      ]
+    },
+    "secondary": "White",
+    "accent": "BrightCyan",
+    "success": "BrightGreen",
+    "warning": "BrightYellow",
+    "error": "BrightRed",
+    "fontfg": "BrightWhite",
+    "fontbg": "Black"
+  },
+  "autosave": true,
+  "autosave_freq": 7230,
+  "vim_mode": true,
+  "confirm_delete": true,
+  "date_format": "dd-mm-yyyy",
+  "timezone": "Utc",
+  "autocomplete": true,
+  "currency": "INR",
+  "settings_ui": {
+    "focus": "ColorPicker",
+    "autosave_freq_input": "2hr 30sec",
+    "autosave_freq_valid": true,
+    "autocomplete": false,
+    "vim_mod": false,
+    "confirm_delete": false,
+    "date_fmt": "",
+    "date_valid": false,
+    "timezone_input": "UTC"
+  }
+}
