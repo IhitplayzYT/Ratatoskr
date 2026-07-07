@@ -1,7 +1,0 @@
-/home/ihitplayzyt/Ratatoskr/target/debug/deps/unicode_truncate-58ccaca66eceefda.d: /home/ihitplayzyt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicode-truncate-1.1.0/src/lib.rs
-
-/home/ihitplayzyt/Ratatoskr/target/debug/deps/libunicode_truncate-58ccaca66eceefda.rlib: /home/ihitplayzyt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicode-truncate-1.1.0/src/lib.rs
-
-/home/ihitplayzyt/Ratatoskr/target/debug/deps/libunicode_truncate-58ccaca66eceefda.rmeta: /home/ihitplayzyt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicode-truncate-1.1.0/src/lib.rs
-
-/home/ihitplayzyt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicode-truncate-1.1.0/src/lib.rs:
