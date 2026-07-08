@@ -145,7 +145,7 @@ pub enum EditorMode{
 
 impl Default for EditorState{
     fn default() -> Self {
-        Self { mode: EditorMode::Normal, cursor_x: 0, cursor_y: 0, dirty: false,buffer:Rope::from_str("Start Typing\nRope"),vim:Vimstate::default()}
+        Self { mode: EditorMode::Normal, cursor_x: 0, cursor_y: 0, dirty: false,buffer:Rope::from_str("Start Typing\n"),vim:Vimstate::default()}
     }
 
 }

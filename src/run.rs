@@ -19,6 +19,7 @@ use ratatui::{
 };
 use ropey::Rope;
 use unicode_segmentation::UnicodeSegmentation;
+use std::process::Command;
 
 
 
@@ -71,9 +72,13 @@ fn tick_pomodoro(app: &mut App) {
         if pomo.duration_left == 0 {
             pomo.running = false;
             pomo.paused = false;
-            // TODO: fire a notification / sound / session-complete event here
+            pomo_notif();
         }
     }
+}
+
+fn pomo_notif(){
+Command::new("notify-send").arg("Pomodoro Timer complete").arg("Time Up!Take a Break!").status().unwrap();
 }
 
 fn handle_pomodoro_key(app: &mut App, key: KeyEvent) {
