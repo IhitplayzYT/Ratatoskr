@@ -42,6 +42,9 @@ pub struct App {
     pub last_editor_section: Rect,
     pub is_quit: bool,
     pub pomo_last_second: std::time::Instant,
+    pub journal_ui: JournalUiState,
+    pub note_ui:NoteUiState,
+    pub todo_ui: TodoUiState,
 }
 
 impl App {
@@ -54,7 +57,10 @@ impl App {
             editor: EditorState::default(),
             last_editor_section:Rect::default(),
             is_quit: false,
-            pomo_last_second:Instant::now()
+            pomo_last_second:Instant::now(),
+            journal_ui:JournalUiState::default(),
+            note_ui: NoteUiState::default(),
+            todo_ui:TodoUiState::default()
         }
     }
 }
@@ -842,5 +848,161 @@ impl TryFrom<&str> for Currency {
         }
     }
 }
+
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
+pub enum JournalFocus {
+    Title, Mood, Content, TagName, TagHex, TagAdd, Member, Topic, Save, New, Load,
+}
+impl JournalFocus {
+    const ALL: [JournalFocus; 11] = [
+        JournalFocus::Title, JournalFocus::Mood, JournalFocus::Content,
+        JournalFocus::TagName, JournalFocus::TagHex, JournalFocus::TagAdd,
+        JournalFocus::Member, JournalFocus::Topic,
+        JournalFocus::Save, JournalFocus::New, JournalFocus::Load,
+    ];
+    pub fn next(self) -> Self { let i = Self::ALL.iter().position(|f| *f == self).unwrap(); Self::ALL[(i + 1) % Self::ALL.len()] }
+    pub fn prev(self) -> Self { let i = Self::ALL.iter().position(|f| *f == self).unwrap(); Self::ALL[(i + Self::ALL.len() - 1) % Self::ALL.len()] }
+}
+
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
+pub enum JournalMode { Edit, Load }
+
+pub struct JournalUiState {
+    pub mode: JournalMode,
+    pub focus: JournalFocus,
+    pub editing: Journal_task,
+    pub tag_name_input: String,
+    pub tag_hex_input: String,
+    pub list: Vec<Journal_task>,
+    pub list_selected: usize,
+}
+impl Default for JournalUiState {
+    fn default() -> Self {
+        Self {
+            mode: JournalMode::Edit,
+            focus: JournalFocus::Title,
+            editing: Journal_task::new(None, None, None, None, None, None),
+            tag_name_input: String::new(),
+            tag_hex_input: String::new(),
+            list: Vec::new(),
+            list_selected: 0,
+        }
+    }
+}
+
+
+
+//  pub struct Note_task {
+//      pub id: Uuid,
+//      pub title: String,
+//      pub content: String,
+//      pub created_at: DateTime<Utc>,
+//      pub updated_at: DateTime<Utc>,
+//      pub pinned: bool,
+//      pub favorite: bool,
+//      pub tags: Vec<Tag>,
+//      pub topic: Option<String>,
+//      pub member: Option<String>
+//  }
+
+
+
+#[derive(Debug,PartialEq, Eq,Clone, Copy)]
+pub enum NoteMode { Edit, Load }
+pub struct NoteUiState{
+    pub mode: NoteMode,
+    pub focus:NoteFocus,
+    pub editing: Note_task,    
+    pub tag_name_input: String,
+    pub tag_hex_input: String,
+    pub list: Vec<Note_task>,
+    pub list_selected: usize,
+}
+
+
+
+#[derive(Debug,PartialEq, Eq,Clone, Copy)]
+pub enum NoteFocus {
+    Title, Pinned, Favourite,Content, TagName, TagHex, TagAdd, Member, Topic, Save, New, Load,
+}
+
+impl NoteFocus {
+    const ALL: [NoteFocus; 12] = [
+        NoteFocus::Title, NoteFocus::Pinned,NoteFocus::Favourite, NoteFocus::Content,
+        NoteFocus::TagName, NoteFocus::TagHex, NoteFocus::TagAdd,
+        NoteFocus::Member, NoteFocus::Topic,
+        NoteFocus::Save, NoteFocus::New, NoteFocus::Load,
+    ];
+    pub fn next(self) -> Self { let i = Self::ALL.iter().position(|f| *f == self).unwrap(); Self::ALL[(i + 1) % Self::ALL.len()] }
+    pub fn prev(self) -> Self { let i = Self::ALL.iter().position(|f| *f == self).unwrap(); Self::ALL[(i + Self::ALL.len() - 1) % Self::ALL.len()] }
+}
+
+
+impl Default for NoteUiState{
+    fn default() -> Self {
+       Self { mode: NoteMode::Edit, focus: NoteFocus::Title, editing: Note_task::new(None, None, false, false, None, None, None), tag_name_input: String::new(), tag_hex_input: String::new(), list: Vec::new(), list_selected: 0 }
+    }
+    
+}
+
+
+//  pub struct Todo_task {
+//      pub id: Uuid,
+//      pub title: String,
+//      pub description: Option<String>,
+//      pub status: bool,
+//      pub priority: Priority,
+//      pub due_date: Option<DateTime<Utc>>,
+//      pub created_at: DateTime<Utc>,
+//      pub completed_at: Option<DateTime<Utc>>,
+//      pub tags: Vec<Tag>,
+//      pub topic: Option<String>,
+//      pub member: Option<String>,
+//  }
+
+
+#[derive(Debug,PartialEq, Eq,Clone, Copy)]
+pub enum TodoFocus {
+    Title, Description,Status, Priority,DueDate,TagName,TagHex, TagAdd, Member, Topic, Save, New, Load,
+}
+
+impl TodoFocus {
+    const ALL: [TodoFocus; 13] = [
+        TodoFocus::Status, TodoFocus::Title,TodoFocus::Description, TodoFocus::Priority,TodoFocus::DueDate,
+        TodoFocus::TagName, TodoFocus::TagHex, TodoFocus::TagAdd,
+        TodoFocus::Member, TodoFocus::Topic,
+        TodoFocus::Save, TodoFocus::New, TodoFocus::Load,
+    ];
+    pub fn next(self) -> Self { let i = Self::ALL.iter().position(|f| *f == self).unwrap(); Self::ALL[(i + 1) % Self::ALL.len()] }
+    pub fn prev(self) -> Self { let i = Self::ALL.iter().position(|f| *f == self).unwrap(); Self::ALL[(i + Self::ALL.len() - 1) % Self::ALL.len()] }
+}
+
+
+#[derive(Debug,PartialEq, Eq,Clone, Copy)]
+pub enum TodoMode { Edit, Load }
+
+
+pub struct TodoUiState{
+    pub mode: TodoMode,
+    pub focus:TodoFocus,
+    pub editing: Todo_task,
+    pub tag_name_input: String,
+    pub tag_hex_input: String,
+    pub list: Vec<Todo_task>,
+    pub list_selected: usize,
+    pub checkbox_focused: bool, 
+    pub due_date_input: String, 
+    pub due_date_valid: bool, 
+}
+
+impl Default for TodoUiState{
+    fn default() -> Self {
+        Self { mode: TodoMode::Load, focus: TodoFocus::Title, editing: Todo_task::new("Untitled".to_string(), None, None, None, Vec::new(), None, None), tag_name_input: String::new(), tag_hex_input: String::new(), list: Vec::new(), list_selected: 0,checkbox_focused:false,due_date_input:String::new(),due_date_valid:true}
+    }
+
+}
+
+
+
 
 }

@@ -255,7 +255,13 @@ pub fn save_journal_task(&self,task: &Journal_task) -> mysql::Result<()>{
                 :updated,
                 :member,
                 :topic
-            )
+            ) ON DUPLICATE KEY UPDATE
+                title = VALUES(title),
+                content = VALUES(content),
+                mood = VALUES(mood),
+                updated_at = VALUES(updated_at),
+                member = VALUES(member),
+                topic = VALUES(topic)
             ",
             params! {
                 "id" => task.id.to_string(),
@@ -304,8 +310,8 @@ pub fn load_journal_task(&self,jt_id:Uuid) -> mysql::Result<Option<Journal_task>
     
     let mut ret = tx.exec_map(r"
     SELECT title,content,mood,created_at,updated_at,member,topic FROM Journal_tasks jt WHERE jt.id = ?;
-    ",(jt_id,),|(t,c,m,ca,ua,me,to):(String,String,Option<String>,NaiveDateTime,NaiveDateTime,String,String)|{
-        let mut k = Journal_task::new(Some(t), Some(c), m.map(Mood::from), None, Some(me), Some(to));
+    ",(jt_id,),|(t,c,m,ca,ua,me,to):(String,String,Option<String>,NaiveDateTime,NaiveDateTime,Option<String>,Option<String>)|{
+        let mut k = Journal_task::new(Some(t), Some(c), m.map(Mood::from), None, me, to);
         k.created_at = DateTime::<Utc>::from_naive_utc_and_offset(ca, Utc);
         k.updated_at = DateTime::<Utc>::from_naive_utc_and_offset(ua, Utc);
         k.id = jt_id;
@@ -333,8 +339,8 @@ pub fn load_all_journal_task(&self) -> mysql::Result<Vec<Journal_task>>{
     
     let mut ret = tx.exec_map(r"
     SELECT id,title,content,mood,created_at,updated_at,member,topic FROM Journal_tasks;
-    ",(),|(id,t,c,m,ca,ua,me,to):(String,String,String,Option<String>,NaiveDateTime,NaiveDateTime,String,String)|{
-        let mut k = Journal_task::new(Some(t), Some(c), m.map(Mood::from), None, Some(me), Some(to));
+    ",(),|(id,t,c,m,ca,ua,me,to):(String,String,String,Option<String>,NaiveDateTime,NaiveDateTime,Option<String>,Option<String>)|{
+        let mut k = Journal_task::new(Some(t), Some(c), m.map(Mood::from), None, me, to);
         k.id = Uuid::parse_str(&id).unwrap();
         k.created_at = DateTime::<Utc>::from_naive_utc_and_offset(ca, Utc);
         k.updated_at = DateTime::<Utc>::from_naive_utc_and_offset(ua, Utc);
@@ -363,8 +369,8 @@ INNER JOIN Journal_task_tags AS jtt
 INNER JOIN tags AS t
     ON jtt.tag_id = t.id
 WHERE t.name = ?;
-",(&x.name,),|(id,t,c,m,ca,ua,me,to):(String,String,String,Option<String>,NaiveDateTime,NaiveDateTime,String,String)|{
-        let mut k = Journal_task::new(Some(t), Some(c), m.map(Mood::from), None, Some(me), Some(to));
+",(&x.name,),|(id,t,c,m,ca,ua,me,to):(String,String,String,Option<String>,NaiveDateTime,NaiveDateTime,Option<String>,Option<String>)|{
+        let mut k = Journal_task::new(Some(t), Some(c), m.map(Mood::from), None, me,to);
         k.id = Uuid::parse_str(&id).unwrap();
         k.created_at = DateTime::<Utc>::from_naive_utc_and_offset(ca, Utc);
         k.updated_at = DateTime::<Utc>::from_naive_utc_and_offset(ua, Utc);
@@ -389,8 +395,8 @@ let mut ret = vec![];
 let mut k = tx.exec_map(
 r"
 SELECT * FROM Journal_tasks t WHERE t.member = ?;
-",(&member,),|(id,t,c,m,ca,ua,me,to):(String,String,String,Option<String>,NaiveDateTime,NaiveDateTime,String,String)|{
-        let mut k = Journal_task::new(Some(t), Some(c), m.map(Mood::from), None, Some(me), Some(to));
+",(&member,),|(id,t,c,m,ca,ua,me,to):(String,String,String,Option<String>,NaiveDateTime,NaiveDateTime,Option<String>,Option<String>)|{
+        let mut k = Journal_task::new(Some(t), Some(c), m.map(Mood::from), None, me,to);
         k.created_at = DateTime::<Utc>::from_naive_utc_and_offset(ca, Utc);
         k.updated_at = DateTime::<Utc>::from_naive_utc_and_offset(ua, Utc);
         k.id = Uuid::parse_str(&id).unwrap();
@@ -413,8 +419,8 @@ let mut ret = vec![];
 let mut k = tx.exec_map(
 r"
 SELECT * FROM Journal_tasks t WHERE t.topic = ?;
-",(&topic,),|(id,t,c,m,ca,ua,me,to):(String,String,String,Option<String>,NaiveDateTime,NaiveDateTime,String,String)|{
-        let mut k = Journal_task::new(Some(t), Some(c), m.map(Mood::from), None, Some(me), Some(to));
+",(&topic,),|(id,t,c,m,ca,ua,me,to):(String,String,String,Option<String>,NaiveDateTime,NaiveDateTime,Option<String>,Option<String>)|{
+        let mut k = Journal_task::new(Some(t), Some(c), m.map(Mood::from), None,me,to);
         k.created_at = DateTime::<Utc>::from_naive_utc_and_offset(ca, Utc);
         k.updated_at = DateTime::<Utc>::from_naive_utc_and_offset(ua, Utc);
         k.id = Uuid::parse_str(&id).unwrap();
@@ -473,7 +479,7 @@ pub fn add_tag(&self,conn:&mut impl Queryable,tag: &Tag) -> mysql::Result<()>{
 
 pub fn load_all_tags(&self) -> mysql::Result<Vec<Tag>>{
     let mut conn = self.conn()?;
-    let ret = conn.exec_map("SELECT * FROM tags;", (), |(_id,name,color):(String,String,String)|{
+    let ret = conn.exec_map("SELECT * FROM tags;", (), |(_id,name,color):(i32,String,String)|{
         let (r,g,b) = (&color[0..2],&color[2..4],&color[4..6]);
         Tag::new(name, Some(
             MyColor::RGB(u8::from_str_radix(r, 16).unwrap(), u8::from_str_radix(g, 16).unwrap(), u8::from_str_radix(b, 16).unwrap())
@@ -547,7 +553,14 @@ pub fn save_note_task(&self,task: &Note_task) -> mysql::Result<()>{
                 :favorite,
                 :member,
                 :topic
-            )
+            ) ON DUPLICATE KEY UPDATE
+            title = VALUES(title),
+            content = VALUES(content),
+            updated_at = VALUES(updated_at),
+            pinned = VALUES(pinned),
+            favorite = VALUES(favorite),
+            member = VALUES(member),
+            topic = VALUES(topic)
             ",
             params! {
                 "id" => task.id.to_string(),
@@ -597,8 +610,8 @@ pub fn load_note_task(&self,jt_id:Uuid) -> mysql::Result<Option<Note_task>>{
     
     let mut ret = tx.exec_map(r"
     SELECT title,content,created_at,updated_at,pinned,favorite,member,topic FROM Note_tasks jt WHERE jt.id = ?;
-    ",(jt_id,),|(t,c,ca,ua,p,f,me,to):(String,String,NaiveDateTime,NaiveDateTime,bool,bool,String,String)|{
-        let mut k = Note_task::new(Some(t),Some(c), p, f, None, Some(me),Some(to));
+    ",(jt_id,),|(t,c,ca,ua,p,f,me,to):(String,String,NaiveDateTime,NaiveDateTime,bool,bool,Option<String>,Option<String>)|{
+        let mut k = Note_task::new(Some(t),Some(c), p, f, None, me,to);
         k.created_at = DateTime::<Utc>::from_naive_utc_and_offset(ca, Utc);
         k.updated_at = DateTime::<Utc>::from_naive_utc_and_offset(ua, Utc);
         k
@@ -626,8 +639,8 @@ pub fn load_all_note_task(&self) -> mysql::Result<Vec<Note_task>>{
     
     let mut ret = tx.exec_map(r"
     SELECT id,title,content,created_at,updated_at,pinned,favorite,member,topic FROM Note_tasks;
-    ",(),|(id,t,c,ca,ua,p,f,me,to):(String,String,String,NaiveDateTime,NaiveDateTime,bool,bool,String,String)|{
-        let mut k = Note_task::new(Some(t),Some(c), p, f, None, Some(me),Some(to));
+    ",(),|(id,t,c,ca,ua,p,f,me,to):(String,String,String,NaiveDateTime,NaiveDateTime,bool,bool,Option<String>,Option<String>)|{
+        let mut k = Note_task::new(Some(t),Some(c), p, f, None,me,to);
         k.created_at = DateTime::<Utc>::from_naive_utc_and_offset(ca, Utc);
         k.updated_at = DateTime::<Utc>::from_naive_utc_and_offset(ua, Utc);
         k.id = Uuid::parse_str(&id).unwrap();
@@ -656,8 +669,8 @@ INNER JOIN Note_task_tags AS ntt
 INNER JOIN tags AS t
     ON ntt.tag_id = t.id
 WHERE t.name = ?;
-",(&x.name,),|(id,t,c,ca,ua,p,f,me,to):(String,String,String,NaiveDateTime,NaiveDateTime,bool,bool,String,String)|{
-        let mut k = Note_task::new(Some(t),Some(c), p, f, None, Some(me),Some(to));
+",(&x.name,),|(id,t,c,ca,ua,p,f,me,to):(String,String,String,NaiveDateTime,NaiveDateTime,bool,bool,Option<String>,Option<String>)|{
+        let mut k = Note_task::new(Some(t),Some(c), p, f, None,me,to);
         k.created_at = DateTime::<Utc>::from_naive_utc_and_offset(ca, Utc);
         k.updated_at = DateTime::<Utc>::from_naive_utc_and_offset(ua, Utc);
         k.id = Uuid::parse_str(&id).unwrap();
@@ -682,8 +695,8 @@ let mut ret = vec![];
 let mut k = tx.exec_map(
 r"
 SELECT * FROM Note_tasks t WHERE t.member = ?;
-",(&member,),|(id,t,c,ca,ua,p,f,me,to):(String,String,String,NaiveDateTime,NaiveDateTime,bool,bool,String,String)|{
-        let mut k = Note_task::new(Some(t),Some(c), p, f, None, Some(me),Some(to));
+",(&member,),|(id,t,c,ca,ua,p,f,me,to):(String,String,String,NaiveDateTime,NaiveDateTime,bool,bool,Option<String>,Option<String>)|{
+        let mut k = Note_task::new(Some(t),Some(c), p, f, None, me,to);
         k.created_at = DateTime::<Utc>::from_naive_utc_and_offset(ca, Utc);
         k.updated_at = DateTime::<Utc>::from_naive_utc_and_offset(ua, Utc);
         k.id = Uuid::parse_str(&id).unwrap();
@@ -707,8 +720,8 @@ let mut ret = vec![];
 let mut k = tx.exec_map(
 r"
 SELECT * FROM Note_tasks t WHERE t.topic = ?;
-",(&topic,),|(id,t,c,ca,ua,p,f,me,to):(String,String,String,NaiveDateTime,NaiveDateTime,bool,bool,String,String)|{
-        let mut k = Note_task::new(Some(t),Some(c), p, f, None, Some(me),Some(to));
+",(&topic,),|(id,t,c,ca,ua,p,f,me,to):(String,String,String,NaiveDateTime,NaiveDateTime,bool,bool,Option<String>,Option<String>)|{
+        let mut k = Note_task::new(Some(t),Some(c), p, f, None, me,to);
         k.created_at = DateTime::<Utc>::from_naive_utc_and_offset(ca, Utc);
         k.updated_at = DateTime::<Utc>::from_naive_utc_and_offset(ua, Utc);
         k.id = Uuid::parse_str(&id).unwrap();
@@ -788,8 +801,16 @@ pub fn save_todo_task(&self,task: &Todo_task) -> mysql::Result<()>{
                 :completed_at,
                 :member,
                 :topic
-            )
-            ",
+            ) ON DUPLICATE KEY UPDATE
+                title = VALUES(title),
+                description = VALUES(description),
+                status = VALUES(status),
+                priority = VALUES(priority),
+                due_at = VALUES(due_at),
+                completed_at = VALUES(completed_at),
+                member = VALUES(member),
+                topic = VALUES(topic)
+                        ",
             params! {
                 "id" => task.id.to_string(),
                 "title" => &task.title,
@@ -839,8 +860,8 @@ pub fn load_todo_task(&self,jt_id:Uuid) -> mysql::Result<Option<Todo_task>>{
     
     let mut ret = tx.exec_map(r"
     SELECT * FROM Todo_tasks jt WHERE jt.id = ?;
-    ",(jt_id,),|(id,t,d,s,p,da,ca,cpa,me,to):(String,String,String,bool,String,Option<NaiveDateTime>,NaiveDateTime,Option<NaiveDateTime>,String,String)|{
-        let mut k = Todo_task::new(t, Some(d), Some(p.into()),None,vec![],Some(to),Some(me));
+    ",(jt_id,),|(id,t,d,s,p,da,ca,cpa,me,to):(String,String,String,bool,String,Option<NaiveDateTime>,NaiveDateTime,Option<NaiveDateTime>,Option<String>,Option<String>)|{
+        let mut k = Todo_task::new(t, Some(d), Some(p.into()),None,vec![],to,me);
         k.created_at = DateTime::<Utc>::from_naive_utc_and_offset(ca, Utc);
         k.due_date = da.map(|d| DateTime::<Utc>::from_naive_utc_and_offset(d, Utc));
         k.completed_at = cpa.map(|d| DateTime::<Utc>::from_naive_utc_and_offset(d, Utc));
@@ -870,8 +891,8 @@ pub fn load_all_todo_task(&self) -> mysql::Result<Vec<Todo_task>>{
     
     let mut ret = tx.exec_map(r"
     SELECT * FROM Todo_tasks;
-    ",(),|(id,t,d,s,p,da,ca,cpa,me,to):(String,String,String,bool,String,Option<NaiveDateTime>,NaiveDateTime,Option<NaiveDateTime>,String,String)|{
-        let mut k = Todo_task::new(t, Some(d), Some(p.into()),None,vec![],Some(to),Some(me));
+    ",(),|(id,t,d,s,p,da,ca,cpa,me,to):(String,String,String,bool,String,Option<NaiveDateTime>,NaiveDateTime,Option<NaiveDateTime>,Option<String>,Option<String>)|{
+        let mut k = Todo_task::new(t, Some(d), Some(p.into()),None,vec![],to,me);
         k.created_at = DateTime::<Utc>::from_naive_utc_and_offset(ca, Utc);
         k.due_date = da.map(|d| DateTime::<Utc>::from_naive_utc_and_offset(d, Utc));
         k.completed_at = cpa.map(|d| DateTime::<Utc>::from_naive_utc_and_offset(d, Utc));
@@ -901,8 +922,8 @@ INNER JOIN Todo_task_tags AS ttt
 INNER JOIN tags AS t
     ON ttt.tag_id = t.id
 WHERE t.name = ?;
-",(&x.name,),|(id,t,d,s,p,da,ca,cpa,me,to):(String,String,String,bool,String,Option<NaiveDateTime>,NaiveDateTime,Option<NaiveDateTime>,String,String)|{
-        let mut k = Todo_task::new(t, Some(d), Some(p.into()),None,vec![],Some(to),Some(me));
+",(&x.name,),|(id,t,d,s,p,da,ca,cpa,me,to):(String,String,String,bool,String,Option<NaiveDateTime>,NaiveDateTime,Option<NaiveDateTime>,Option<String>,Option<String>)|{
+        let mut k = Todo_task::new(t, Some(d), Some(p.into()),None,vec![],to,me);
         k.created_at = DateTime::<Utc>::from_naive_utc_and_offset(ca, Utc);
         k.due_date = da.map(|d| DateTime::<Utc>::from_naive_utc_and_offset(d, Utc));
         k.completed_at = cpa.map(|d| DateTime::<Utc>::from_naive_utc_and_offset(d, Utc));
@@ -929,8 +950,8 @@ let mut ret = vec![];
 let mut k = tx.exec_map(
 r"
 SELECT * FROM Todo_tasks t WHERE t.member = ?;
-",(&member,),|(id,t,d,s,p,da,ca,cpa,me,to):(String,String,String,bool,String,Option<NaiveDateTime>,NaiveDateTime,Option<NaiveDateTime>,String,String)|{
-        let mut k = Todo_task::new(t, Some(d), Some(p.into()),None,vec![],Some(to),Some(me));
+",(&member,),|(id,t,d,s,p,da,ca,cpa,me,to):(String,String,String,bool,String,Option<NaiveDateTime>,NaiveDateTime,Option<NaiveDateTime>,Option<String>,Option<String>)|{
+        let mut k = Todo_task::new(t, Some(d), Some(p.into()),None,vec![],to,me);
         k.created_at = DateTime::<Utc>::from_naive_utc_and_offset(ca, Utc);
         k.due_date = da.map(|d| DateTime::<Utc>::from_naive_utc_and_offset(d, Utc));
         k.completed_at = cpa.map(|d| DateTime::<Utc>::from_naive_utc_and_offset(d, Utc));
@@ -956,8 +977,8 @@ let mut ret = vec![];
 let mut k = tx.exec_map(
 r"
 SELECT * FROM Todo_tasks t WHERE t.topic = ?;
-",(&topic,),|(id,t,d,s,p,da,ca,cpa,me,to):(String,String,String,bool,String,Option<NaiveDateTime>,NaiveDateTime,Option<NaiveDateTime>,String,String)|{
-        let mut k = Todo_task::new(t, Some(d), Some(p.into()),None,vec![],Some(to),Some(me));
+",(&topic,),|(id,t,d,s,p,da,ca,cpa,me,to):(String,String,String,bool,String,Option<NaiveDateTime>,NaiveDateTime,Option<NaiveDateTime>,Option<String>,Option<String>)|{
+        let mut k = Todo_task::new(t, Some(d), Some(p.into()),None,vec![],to,me);
         k.created_at = DateTime::<Utc>::from_naive_utc_and_offset(ca, Utc);
         k.due_date = da.map(|d| DateTime::<Utc>::from_naive_utc_and_offset(d, Utc));
         k.completed_at = cpa.map(|d| DateTime::<Utc>::from_naive_utc_and_offset(d, Utc));

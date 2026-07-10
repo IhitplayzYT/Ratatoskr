@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::model::app::App::Color_channel;
 
 
-#[derive(Debug,PartialEq, Eq,Hash,Clone)]
+#[derive(Debug,PartialEq, Eq,Hash,Clone,Copy,PartialOrd)]
     pub enum Priority {
     Low,
     Default,
@@ -16,6 +16,25 @@ use crate::model::app::App::Color_channel;
     High,
     Critical,
     }
+
+impl Priority {
+    const ALL: [Priority; 5] = [Priority::Low, Priority::Default, Priority::Medium, Priority::High, Priority::Critical];
+    pub fn title(&self) -> &'static str {
+        match self {
+            Priority::Low => "Low", Priority::Default => "Default", Priority::Medium => "Medium",
+            Priority::High => "High", Priority::Critical => "Critical",
+        }
+    }
+    pub fn next(self) -> Self { let i = Self::ALL.iter().position(|p| *p == self).unwrap(); Self::ALL[(i + 1) % Self::ALL.len()] }
+    pub fn prev(self) -> Self { let i = Self::ALL.iter().position(|p| *p == self).unwrap(); Self::ALL[(i + Self::ALL.len() - 1) % Self::ALL.len()] }
+    pub fn color(&self) -> Color {
+        match self {
+            Priority::Low => Color::Gray, Priority::Default => Color::White, Priority::Medium => Color::Yellow,
+            Priority::High => Color::LightRed, Priority::Critical => Color::Red,
+        }
+    }
+}
+
 
 impl From<Priority> for String{
     fn from(value: Priority) -> Self {
@@ -57,7 +76,7 @@ impl Display for Priority{
 
 
 
-    #[derive(Debug,PartialEq, Eq,Hash,Clone)]
+    #[derive(Debug,PartialEq, Eq,Hash,Clone,Copy)]
 pub enum Mood {
     Happy,
     Neutral,
@@ -66,6 +85,23 @@ pub enum Mood {
     Excited,
     Tired,
 }
+
+impl Mood {
+    pub const ALL: [Mood; 6] = [Mood::Happy, Mood::Neutral, Mood::Sad, Mood::Angry, Mood::Excited, Mood::Tired];
+    pub fn title(&self) -> &'static str {
+        match self {
+            Mood::Happy => "Happy",
+            Mood::Neutral => "Neutral",
+            Mood::Sad => "Sad",
+            Mood::Angry => "Angry",
+            Mood::Excited => "Excited",
+            Mood::Tired => "Tired",
+        }
+    }
+    pub fn next(self) -> Self { let i = Self::ALL.iter().position(|m| *m == self).unwrap(); Self::ALL[(i + 1) % Self::ALL.len()] }
+    pub fn prev(self) -> Self { let i = Self::ALL.iter().position(|m| *m == self).unwrap(); Self::ALL[(i + Self::ALL.len() - 1) % Self::ALL.len()] }
+}
+
 
 impl From<String> for Mood{
 fn from(value: String) -> Self {

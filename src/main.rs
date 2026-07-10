@@ -5,6 +5,8 @@ mod db;
 mod tree;
 mod conversion;
 mod run;
+mod render;
+mod input;
 
 use helper::Helper;
 use run::Run;
