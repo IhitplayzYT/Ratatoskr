@@ -113,7 +113,7 @@ fn render_journal_buttons(f: &mut Frame, area: Rect, app: &App) {
 }
 
 fn render_journal_button(f: &mut Frame, area: Rect, label: &str, focused: bool, color: Color) {
-    let style = if focused { Style::default().fg(color).add_modifier(Modifier::BOLD | Modifier::SLOW_BLINK) } else { Style::default().fg(color) };
+    let style = if focused { Style::default().fg(color).add_modifier(Modifier::BOLD | Modifier::REVERSED) } else { Style::default().fg(color) };
     let block = Block::default().borders(Borders::ALL).border_style(style);
     let text = Paragraph::new(Line::from(Span::styled(format!(" {label} "), style))).alignment(Alignment::Center).block(block);
     f.render_widget(text, area);

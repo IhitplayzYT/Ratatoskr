@@ -5,7 +5,7 @@ pub mod Run{
 use ratatui::{Terminal, layout::Alignment, style::Stylize, symbols};
 use std::time::{Instant,Duration};
 
-use crate::{input::{general_input::Input::{escalate_overdue_todos, handle_key, handle_mouse}, pomo_input::Input::tick_pomodoro}, model::{app::App::{App, Color_channel, EditorMode, EditorState, JournalFocus, JournalMode, Page, Pending, PomoFocus, SettingsFocus, Theme_comp, Vim_mode, parse_autosave_duration, parse_fmt_date}, journal::Journal::Journal_task, meta::Meta::{Mood, MyColor, Tag}}, render::{journal_render::Render::render_journal, pomo_render::Render::render_pomodoro, setting_render::Render::render_settings, todo_render::Render::render_todo}};
+use crate::{input::{general_input::Input::{escalate_overdue_todos, handle_key, handle_mouse}, pomo_input::Input::tick_pomodoro}, model::{app::App::{App, Color_channel, EditorMode, EditorState, JournalFocus, JournalMode, Page, Pending, PomoFocus, SettingsFocus, Theme_comp, Vim_mode, parse_autosave_duration, parse_fmt_date}, journal::Journal::Journal_task, meta::Meta::{Mood, MyColor, Tag}}, render::{journal_render::Render::render_journal, note_render::Render::render_notes, pomo_render::Render::render_pomodoro, setting_render::Render::render_settings, todo_render::Render::render_todo}};
  
 use crossterm::event::{
         self, Event, KeyEventKind,

@@ -917,9 +917,23 @@ pub struct NoteUiState{
     pub tag_hex_input: String,
     pub list: Vec<Note_task>,
     pub list_selected: usize,
+    pub filter:NoteFilter,
 }
 
-
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum NoteFilter { All, Pinned, Favourite }
+impl NoteFilter {
+    pub fn next(self) -> Self {
+        match self {
+            NoteFilter::All => NoteFilter::Pinned,
+            NoteFilter::Pinned => NoteFilter::Favourite,
+            NoteFilter::Favourite => NoteFilter::All,
+        }
+    }
+    pub fn title(&self) -> &'static str {
+        match self { NoteFilter::All => "All", NoteFilter::Pinned => "Pinned", NoteFilter::Favourite => "Favourite" }
+    }
+}
 
 #[derive(Debug,PartialEq, Eq,Clone, Copy)]
 pub enum NoteFocus {
@@ -940,7 +954,7 @@ impl NoteFocus {
 
 impl Default for NoteUiState{
     fn default() -> Self {
-       Self { mode: NoteMode::Edit, focus: NoteFocus::Title, editing: Note_task::new(None, None, false, false, None, None, None), tag_name_input: String::new(), tag_hex_input: String::new(), list: Vec::new(), list_selected: 0 }
+       Self { mode: NoteMode::Edit, focus: NoteFocus::Title, editing: Note_task::new(None, None, false, false, None, None, None), tag_name_input: String::new(), tag_hex_input: String::new(), list: Vec::new(), list_selected: 0 ,filter:NoteFilter::All}
     }
     
 }
