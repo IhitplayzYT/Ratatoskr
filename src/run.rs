@@ -79,6 +79,8 @@ fn ui(f: &mut Frame, app: &mut App) {
         Page::Settings => render_settings(f, root[1], app),
         Page::Journal => render_journal(f, root[1], app),
         Page::Todo => render_todo(f,root[1],app),
+        Page::Finance => render_ledger(f,root[1],app),
+        Page::Calendar => render_calender(f,root[1],app),
         Page::Note => render_notes(f,root[1],app),
         _ => {
             app.last_editor_section = root[1];

@@ -9,12 +9,12 @@ use rust_decimal::prelude::*;
     use uuid::Uuid;
     #[derive(Debug)]
     pub struct Finance_task{
-        id:Uuid,
-        item:String,
-        desc:Option<String>,
+        pub id:Uuid,
+        pub item:String,
+        pub desc:Option<String>,
         pub txn_type: Txn_Type,
-        amnt: Decimal,
-        freq:Frequency,
+        pub amnt: Decimal,
+        pub freq:Frequency,
         pub txn_time: DateTime<Utc>
     }
 

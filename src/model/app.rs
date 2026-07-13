@@ -4,11 +4,11 @@ pub mod App{
 use std::{collections::HashSet, fs, hash::Hash, io, time::Instant};
 
 
-use crate::{db::Database::Database, model::{calendar::Calendar::Calendar_task, finance::Finance::Ledger, journal::Journal::Journal_task, meta::Meta::{MyColor, Tag}, notes::Note::Note_task, pomodero::Pomodero, todo::Todo::Todo_task}};
+use crate::{db::Database::Database, model::{app::App::LedgerFocus::Frequency, calendar::Calendar::Calendar_task, finance::Finance::{Finance_task, Ledger}, journal::Journal::Journal_task, meta::Meta::{MyColor, Tag, Txn_Type}, notes::Note::Note_task, pomodero::Pomodero, todo::Todo::Todo_task}};
 
 use chrono::{Utc};
 use ratatui::layout::Rect;
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, prelude::Zero};
 use crate::Conversion::CONVERSION_RATES;
 use serde::{Deserialize,Serialize};
 use ropey::Rope;
@@ -45,6 +45,7 @@ pub struct App {
     pub journal_ui: JournalUiState,
     pub note_ui:NoteUiState,
     pub todo_ui: TodoUiState,
+    pub ledger_ui: LedgerUiState,    
 }
 
 impl App {
@@ -60,7 +61,8 @@ impl App {
             pomo_last_second:Instant::now(),
             journal_ui:JournalUiState::default(),
             note_ui: NoteUiState::default(),
-            todo_ui:TodoUiState::default()
+            todo_ui:TodoUiState::default(),
+            ledger_ui: LedgerUiState::default()
         }
     }
 }
@@ -1012,6 +1014,52 @@ pub struct TodoUiState{
 impl Default for TodoUiState{
     fn default() -> Self {
         Self { mode: TodoMode::Load, focus: TodoFocus::Title, editing: Todo_task::new("Untitled".to_string(), None, None, None, Vec::new(), None, None), tag_name_input: String::new(), tag_hex_input: String::new(), list: Vec::new(), list_selected: 0,checkbox_focused:false,due_date_input:String::new(),due_date_valid:true}
+    }
+
+}
+
+
+
+//    pub struct Finance_task{
+//         id:Uuid,
+//         item:String,
+//         desc:Option<String>,
+//         pub txn_type: Txn_Type,
+//         amnt: Decimal,
+//         freq:Frequency,
+//         pub txn_time: DateTime<Utc>
+//     }
+
+#[derive(Debug,PartialEq, Eq,Clone, Copy)]
+pub enum LedgerFocus {
+    Item, Description,Frequency,Txn_time, Add, Load,
+}
+
+impl LedgerFocus {
+    const ALL: [LedgerFocus; 6] = [
+        LedgerFocus::Item,LedgerFocus::Description, LedgerFocus::Frequency,LedgerFocus::Txn_time,
+        LedgerFocus::Add, LedgerFocus::Load,
+    ];
+    pub fn next(self) -> Self { let i = Self::ALL.iter().position(|f| *f == self).unwrap(); Self::ALL[(i + 1) % Self::ALL.len()] }
+    pub fn prev(self) -> Self { let i = Self::ALL.iter().position(|f| *f == self).unwrap(); Self::ALL[(i + Self::ALL.len() - 1) % Self::ALL.len()] }
+}
+
+
+#[derive(Debug,PartialEq, Eq,Clone, Copy)]
+pub enum LedgerMode { Edit, Load }
+
+
+pub struct LedgerUiState{
+    pub mode: LedgerMode,
+    pub focus: LedgerFocus,
+    pub editing: Finance_task,
+    pub list: Ledger,
+    pub list_selected: usize,
+}
+
+impl Default for LedgerUiState{
+    fn default() -> Self {
+        Self { mode: LedgerMode::Load, focus: LedgerFocus::Load, editing: Finance_task::new("".to_string(), None, Txn_Type::DEBIT, Decimal::zero(), None), list: Ledger::new(), list_selected: 0 }
     }
 
 }

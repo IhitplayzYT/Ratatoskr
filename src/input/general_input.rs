@@ -3,7 +3,7 @@ pub mod Input{
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind};
 use ropey::Rope;
 
-use crate::{input::{editor::Input::handle_editor_key, journal_input::Input::handle_journal_key, note_input::Input::handle_notes_key, pomo_input::Input::handle_pomodoro_key, setting_input::Input::handle_settings_key, todo_input::Input::handle_todo_key}, model::{app::App::{App, EditorMode, EditorState, Page, Vim_mode}, meta::Meta::{MyColor, Priority, Tag}}};
+use crate::{input::{calender_input::Input::handle_calender, editor::Input::handle_editor_key, journal_input::Input::handle_journal_key, ledger_input::Input::handle_ledger, note_input::Input::handle_notes_key, pomo_input::Input::handle_pomodoro_key, setting_input::Input::handle_settings_key, todo_input::Input::handle_todo_key}, model::{app::App::{App, EditorMode, EditorState, Page, Vim_mode}, meta::Meta::{MyColor, Priority, Tag}}};
 
 
 
@@ -82,6 +82,8 @@ pub fn handle_key(app: &mut App, key: KeyEvent) {
         Page::Note => handle_notes_key(app,key),    
         Page::Journal => handle_journal_key(app, key),
         Page::Pomodoro => handle_pomodoro_key(app, key),
+        Page::Finance => handle_ledger(app,key),
+        Page::Calendar => handle_calender(app,key),
         Page::Home => {
             if key.code == KeyCode::Char('q') {
                 app.is_quit = true;

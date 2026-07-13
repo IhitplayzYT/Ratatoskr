@@ -449,9 +449,6 @@ if let Some(start) = freq.find("("){
 _ => {Frequency::SECONDS(0)}};
     
     }
-
-    
-
     }else{
     return Frequency::SECONDS(0);
     }
