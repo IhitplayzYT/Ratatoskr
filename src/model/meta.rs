@@ -351,12 +351,10 @@ impl Duration{
 
 pub fn from_raw_str(dur:&str) ->Self{
     if dur.contains("(") && dur.contains(")"){
-
         if let Some(start) = dur.find("("){
-
             if let Some(end) = dur.find(")"){
                 if dur.to_lowercase().starts_with("custom"){
-                let k = dur.to_string().split(",").map(|x| x.parse::<u16>().expect("Expected an unsigned integer")).collect::<Vec<u16>>();
+                let k = dur.to_string()[start+1..end].split(",").map(|x| x.trim().parse::<u16>().expect("Expected an unsigned integer")).collect::<Vec<u16>>();
                     if k.len() != 7{
                         std::process::exit(2);
                     }
@@ -372,15 +370,15 @@ pub fn from_raw_str(dur:&str) ->Self{
                 }else{
                     let x = dur.to_string()[start+1..end].parse::<u16>().expect("Expected an unsigned integer");
                     return match &dur.to_string()[..start]{
-                        "seconds" => Duration::SECONDS(u8::try_from(x).unwrap()),
-                        "min" => Duration::MIN(u8::try_from(x).unwrap()),
-                        "hour" => Duration::HOUR(u8::try_from(x).unwrap()),
-                        "day" => Duration::DAY(x),
-                        "week" => Duration::WEEK(u8::try_from(x).unwrap()),
-                        "month" => Duration::MONTH(u8::try_from(x).unwrap()),
-                        "year" => Duration::YEAR(u8::try_from(x).unwrap()),
-                        "decade" => Duration::DECADE(u8::try_from(x).unwrap()),
-                        "century" => Duration::CENTURY(u8::try_from(x).unwrap()),
+                        "SECONDS" => Duration::SECONDS(u8::try_from(x).unwrap()),
+                        "MIN" => Duration::MIN(u8::try_from(x).unwrap()),
+                        "HOUR" => Duration::HOUR(u8::try_from(x).unwrap()),
+                        "DAY" => Duration::DAY(x),
+                        "WEEK" => Duration::WEEK(u8::try_from(x).unwrap()),
+                        "MONTH" => Duration::MONTH(u8::try_from(x).unwrap()),
+                        "YEAR" => Duration::YEAR(u8::try_from(x).unwrap()),
+                        "DECADE" => Duration::DECADE(u8::try_from(x).unwrap()),
+                        "CENTURY" => Duration::CENTURY(u8::try_from(x).unwrap()),
                         _ => Duration::SECONDS(0)
                      };   
                     }
@@ -398,11 +396,10 @@ pub fn from_raw_str(dur:&str) ->Self{
         let (start,end) = (start.trim(),end.trim());
         let (d1,t1) = start.split_at(start.find(" ").unwrap());
         let (d2,t2) = end.split_at(end.find(" ").unwrap());
-
-        let pt1 = t1.split(":").map(|x| x.parse::<u8>().expect("Expected Unsigned Integer")).collect::<Vec<u8>>();
-        let pt2 = t2.split(":").map(|x| x.parse::<u8>().expect("Expected Unsigned Integer")).collect::<Vec<u8>>();
-        let pd1 = d1.split("/").map(|x| x.parse::<u16>().expect("Expected Unsigned Integer")).collect::<Vec<u16>>();
-        let pd2 = d2.split("/").map(|x| x.parse::<u16>().expect("Expected Unsigned Integer")).collect::<Vec<u16>>();
+        let pt1 = t1.split(":").map(|x| x.trim().parse::<u8>().expect("Expected Unsigned Integer")).collect::<Vec<u8>>();
+        let pt2 = t2.split(":").map(|x| x.trim().parse::<u8>().expect("Expected Unsigned Integer")).collect::<Vec<u8>>();
+        let pd1 = d1.split("/").map(|x| x.trim().parse::<u16>().expect("Expected Unsigned Integer")).collect::<Vec<u16>>();
+        let pd2 = d2.split("/").map(|x| x.trim().parse::<u16>().expect("Expected Unsigned Integer")).collect::<Vec<u16>>();
         if pt1.len() != 3 || pt2.len() != 3 || pd1.len() != 3 || pd2.len() != 3{
             eprintln!("Invalid date or time parse");
             std::process::exit(3);
@@ -410,6 +407,66 @@ pub fn from_raw_str(dur:&str) ->Self{
         return Duration::Interval(u8::try_from(pd1[0]).unwrap(),u8::try_from(pd1[1]).unwrap(),pd1[2], pt1[0], pt1[1], pt1[2], u8::try_from(pd2[0]).unwrap(),u8::try_from(pd2[1]).unwrap(),pd2[2], pt2[0], pt2[1], pt2[2]);        
     }
 }
+    const KIND_COUNT: usize = 9;
+
+    fn kind_idx(&self) -> usize {
+        match self {
+            Duration::SECONDS(_) => 0, Duration::MIN(_) => 1, Duration::HOUR(_) => 2,
+            Duration::DAY(_) => 3, Duration::WEEK(_) => 4, Duration::MONTH(_) => 5,
+            Duration::YEAR(_) => 6, Duration::DECADE(_) => 7, Duration::CENTURY(_) => 8,
+            Duration::Custom(..) | Duration::Interval(..) => 3, // fallback to DAY if cycling starts from a complex variant
+        }
+    }
+    fn from_kind_idx(idx: usize, val: u16) -> Self {
+        match idx {
+            0 => Duration::SECONDS(val.min(255) as u8),
+            1 => Duration::MIN(val.min(255) as u8),
+            2 => Duration::HOUR(val.min(255) as u8),
+            3 => Duration::DAY(val),
+            4 => Duration::WEEK(val.min(255) as u8),
+            5 => Duration::MONTH(val.min(255) as u8),
+            6 => Duration::YEAR(val.min(255) as u8),
+            7 => Duration::DECADE(val.min(255) as u8),
+            8 => Duration::CENTURY(val.min(255) as u8),
+            _ => Duration::DAY(1),
+        }
+    }
+    fn value(&self) -> u16 {
+        match self {
+            Duration::SECONDS(x) | Duration::MIN(x) | Duration::HOUR(x) | Duration::WEEK(x)
+            | Duration::MONTH(x) | Duration::YEAR(x) | Duration::DECADE(x) | Duration::CENTURY(x) => *x as u16,
+            Duration::DAY(x) => *x,
+            Duration::Custom(..) | Duration::Interval(..) => 1,
+        }
+    }
+    pub fn next_kind(self) -> Self { Self::from_kind_idx((self.kind_idx() + 1) % Self::KIND_COUNT, self.value().max(1)) }
+    pub fn prev_kind(self) -> Self { Self::from_kind_idx((self.kind_idx() + Self::KIND_COUNT - 1) % Self::KIND_COUNT, self.value().max(1)) }
+    pub fn bump_value(self, delta: i32) -> Self { let v = (self.value() as i32 + delta).max(1) as u16; Self::from_kind_idx(self.kind_idx(), v) }
+    pub fn title(&self) -> String {
+        match self {
+            Duration::SECONDS(x) => format!("{x} seconds"), Duration::MIN(x) => format!("{x} minutes"),
+            Duration::HOUR(x) => format!("{x} hours"), Duration::DAY(x) => format!("{x} days"),
+            Duration::WEEK(x) => format!("{x} weeks"), Duration::MONTH(x) => format!("{x} months"),
+            Duration::YEAR(x) => format!("{x} years"), Duration::DECADE(x) => format!("{x} decades"),
+            Duration::CENTURY(x) => format!("{x} centuries"),
+            Duration::Custom(..) => "Custom (not editable here)".to_string(),
+            Duration::Interval(..) => "Interval (not editable here)".to_string(),
+        }
+    }
+    /// Rough day-span for calendar shading — approximated (30-day months,
+    /// 365-day years), good enough for "does this event touch this cell".
+    pub fn approx_days(&self) -> i64 {
+        match self {
+            Duration::SECONDS(_) | Duration::MIN(_) | Duration::HOUR(_) => 1,
+            Duration::DAY(x) => *x as i64,
+            Duration::WEEK(x) => *x as i64 * 7,
+            Duration::MONTH(x) => *x as i64 * 30,
+            Duration::YEAR(x) => *x as i64 * 365,
+            Duration::DECADE(x) => *x as i64 * 3650,
+            Duration::CENTURY(x) => *x as i64 * 36500,
+            Duration::Custom(..) | Duration::Interval(..) => 1,
+        }
+    }
 
 }
 
@@ -456,10 +513,77 @@ _ => {Frequency::SECONDS(0)}};
 }else{
     return Frequency::SECONDS(0);
 }
-
-
 }
-
+    const KIND_COUNT: usize = 10;
+    fn kind_idx(&self) -> usize {
+        match self {
+            Frequency::Once => 0, Frequency::SECONDS(_) => 1, Frequency::MIN(_) => 2,
+            Frequency::HOUR(_) => 3, Frequency::DAY(_) => 4, Frequency::WEEK(_) => 5,
+            Frequency::MONTH(_) => 6, Frequency::YEAR(_) => 7, Frequency::DECADE(_) => 8,
+            Frequency::CENTURY(_) => 9,
+        }
+    }
+    fn from_kind_idx(idx: usize, val: u16) -> Self {
+        match idx {
+            0 => Frequency::Once,
+            1 => Frequency::SECONDS(val.min(255) as u8),
+            2 => Frequency::MIN(val.min(255) as u8),
+            3 => Frequency::HOUR(val.min(255) as u8),
+            4 => Frequency::DAY(val),
+            5 => Frequency::WEEK(val.min(255) as u8),
+            6 => Frequency::MONTH(val.min(255) as u8),
+            7 => Frequency::YEAR(val.min(255) as u8),
+            8 => Frequency::DECADE(val.min(255) as u8),
+            9 => Frequency::CENTURY(val.min(255) as u8),
+            _ => Frequency::Once,
+        }
+    }
+    fn value(&self) -> u16 {
+        match self {
+            Frequency::Once => 0,
+            Frequency::SECONDS(x) | Frequency::MIN(x) | Frequency::HOUR(x)
+            | Frequency::WEEK(x) | Frequency::MONTH(x) | Frequency::YEAR(x)
+            | Frequency::DECADE(x) | Frequency::CENTURY(x) => *x as u16,
+            Frequency::DAY(x) => *x,
+        }
+    }
+    pub fn next_kind(self) -> Self { Self::from_kind_idx((self.kind_idx() + 1) % Self::KIND_COUNT, self.value().max(1)) }
+    pub fn prev_kind(self) -> Self { Self::from_kind_idx((self.kind_idx() + Self::KIND_COUNT - 1) % Self::KIND_COUNT, self.value().max(1)) }
+    pub fn bump_value(self, delta: i32) -> Self {
+        let v = (self.value() as i32 + delta).max(0) as u16;
+        Self::from_kind_idx(self.kind_idx(), v)
+    }
+    pub fn title(&self) -> String {
+        match self {
+            Frequency::Once => "Once".to_string(),
+            Frequency::SECONDS(x) => format!("Every {x} seconds"),
+            Frequency::MIN(x) => format!("Every {x} minutes"),
+            Frequency::HOUR(x) => format!("Every {x} hours"),
+            Frequency::DAY(x) => format!("Every {x} days"),
+            Frequency::WEEK(x) => format!("Every {x} weeks"),
+            Frequency::MONTH(x) => format!("Every {x} months"),
+            Frequency::YEAR(x) => format!("Every {x} years"),
+            Frequency::DECADE(x) => format!("Every {x} decades"),
+            Frequency::CENTURY(x) => format!("Every {x} centuries"),
+        }
+    }
+    /// Approximate seconds for the recurrence period (calendar months/years
+    /// approximated as fixed-length for simplicity — good enough for a
+    /// polling-based tick check, not for precise calendar arithmetic).
+    pub fn period_seconds(&self) -> Option<i64> {
+        match self {
+            Frequency::Once => None,
+            Frequency::SECONDS(x) => Some(*x as i64),
+            Frequency::MIN(x) => Some(*x as i64 * 60),
+            Frequency::HOUR(x) => Some(*x as i64 * 3600),
+            Frequency::DAY(x) => Some(*x as i64 * 86400),
+            Frequency::WEEK(x) => Some(*x as i64 * 7 * 86400),
+            Frequency::MONTH(x) => Some(*x as i64 * 30 * 86400),
+            Frequency::YEAR(x) => Some(*x as i64 * 365 * 86400),
+            Frequency::DECADE(x) => Some(*x as i64 * 10 * 365 * 86400),
+            Frequency::CENTURY(x) => Some(*x as i64 * 100 * 365 * 86400),
+        }
+    }
 }
 
 
@@ -535,6 +659,21 @@ impl From<String> for Txn_Type{
         }
     }
 
+}
+impl Txn_Type {
+    const ALL: [Txn_Type; 3] = [Txn_Type::CREDIT, Txn_Type::DEBIT, Txn_Type::BLOCKED];
+    pub fn next(self) -> Self { let i = Self::ALL.iter().position(|t| *t == self).unwrap(); Self::ALL[(i + 1) % Self::ALL.len()] }
+    pub fn prev(self) -> Self { let i = Self::ALL.iter().position(|t| *t == self).unwrap(); Self::ALL[(i + Self::ALL.len() - 1) % Self::ALL.len()] }
+    pub fn title(&self) -> &'static str {
+        match self { Txn_Type::CREDIT => "CREDIT", Txn_Type::DEBIT => "DEBIT", Txn_Type::BLOCKED => "BLOCKED" }
+    }
+    pub fn color(&self) -> ratatui::style::Color {
+        match self {
+            Txn_Type::CREDIT => ratatui::style::Color::Green,
+            Txn_Type::DEBIT => ratatui::style::Color::Red,
+            Txn_Type::BLOCKED => ratatui::style::Color::DarkGray,
+        }
+    }
 }
 
 

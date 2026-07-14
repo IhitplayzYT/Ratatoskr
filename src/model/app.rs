@@ -4,14 +4,14 @@ pub mod App{
 use std::{collections::HashSet, fs, hash::Hash, io, time::Instant};
 
 
-use crate::{db::Database::Database, model::{app::App::LedgerFocus::Frequency, calendar::Calendar::Calendar_task, finance::Finance::{Finance_task, Ledger}, journal::Journal::Journal_task, meta::Meta::{MyColor, Tag, Txn_Type}, notes::Note::Note_task, pomodero::Pomodero, todo::Todo::Todo_task}};
+use crate::{db::Database::Database, model::{calendar::Calendar::Calendar_task, finance::Finance::{Finance_task, Ledger}, journal::Journal::Journal_task, meta::Meta::{MyColor, Tag, Txn_Type}, notes::Note::Note_task, pomodero::Pomodero, todo::Todo::Todo_task}};
 
-use chrono::{Utc};
 use ratatui::layout::Rect;
 use rust_decimal::{Decimal, prelude::Zero};
 use crate::Conversion::CONVERSION_RATES;
 use serde::{Deserialize,Serialize};
 use ropey::Rope;
+use chrono::{Utc,NaiveDate, Datelike, Duration as ChronoDuration};
 pub struct Feature_set {
     pub todos: HashSet<Todo_task>,
     pub notes: HashSet<Note_task>,
@@ -46,6 +46,7 @@ pub struct App {
     pub note_ui:NoteUiState,
     pub todo_ui: TodoUiState,
     pub ledger_ui: LedgerUiState,    
+    pub calendar_ui: CalendarUiState,
 }
 
 impl App {
@@ -62,7 +63,8 @@ impl App {
             journal_ui:JournalUiState::default(),
             note_ui: NoteUiState::default(),
             todo_ui:TodoUiState::default(),
-            ledger_ui: LedgerUiState::default()
+            ledger_ui: LedgerUiState::default(),
+            calendar_ui: CalendarUiState::default()
         }
     }
 }
@@ -1030,19 +1032,19 @@ impl Default for TodoUiState{
 //         pub txn_time: DateTime<Utc>
 //     }
 
-#[derive(Debug,PartialEq, Eq,Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum LedgerFocus {
-    Item, Description,Frequency,Txn_time, Add, Load,
+    Item, Description, Amount, TxnType, Frequency, TxnTime, Add, Load,
 }
-
 impl LedgerFocus {
-    const ALL: [LedgerFocus; 6] = [
-        LedgerFocus::Item,LedgerFocus::Description, LedgerFocus::Frequency,LedgerFocus::Txn_time,
-        LedgerFocus::Add, LedgerFocus::Load,
+    const ALL: [LedgerFocus; 8] = [
+        LedgerFocus::Item, LedgerFocus::Description, LedgerFocus::Amount, LedgerFocus::TxnType,
+        LedgerFocus::Frequency, LedgerFocus::TxnTime, LedgerFocus::Add, LedgerFocus::Load,
     ];
     pub fn next(self) -> Self { let i = Self::ALL.iter().position(|f| *f == self).unwrap(); Self::ALL[(i + 1) % Self::ALL.len()] }
     pub fn prev(self) -> Self { let i = Self::ALL.iter().position(|f| *f == self).unwrap(); Self::ALL[(i + Self::ALL.len() - 1) % Self::ALL.len()] }
 }
+
 
 
 #[derive(Debug,PartialEq, Eq,Clone, Copy)]
@@ -1055,16 +1057,65 @@ pub struct LedgerUiState{
     pub editing: Finance_task,
     pub list: Ledger,
     pub list_selected: usize,
+    pub amnt_input: String,    
+    pub amnt_valid: bool,      
+    pub txn_time_input: String,
+    pub txn_time_valid: bool,  
 }
 
 impl Default for LedgerUiState{
     fn default() -> Self {
-        Self { mode: LedgerMode::Load, focus: LedgerFocus::Load, editing: Finance_task::new("".to_string(), None, Txn_Type::DEBIT, Decimal::zero(), None), list: Ledger::new(), list_selected: 0 }
+        Self { mode: LedgerMode::Load, focus: LedgerFocus::Load, editing: Finance_task::new("".to_string(), None, Txn_Type::DEBIT, Decimal::zero(), None), list: Ledger::new(), list_selected: 0,amnt_input:String::new(),amnt_valid:true,txn_time_input:String::new(),txn_time_valid:true }
     }
 
 }
 
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum CalendarFocus {
+    Event, Description, Duration, Frequency, Date, ColorHex, Save, New, Load,
+}
+impl CalendarFocus {
+    const ALL: [CalendarFocus; 9] = [
+        CalendarFocus::Event, CalendarFocus::Description, CalendarFocus::Duration,
+        CalendarFocus::Frequency, CalendarFocus::Date, CalendarFocus::ColorHex,
+        CalendarFocus::Save, CalendarFocus::New, CalendarFocus::Load,
+    ];
+    pub fn next(self) -> Self { let i = Self::ALL.iter().position(|f| *f == self).unwrap(); Self::ALL[(i + 1) % Self::ALL.len()] }
+    pub fn prev(self) -> Self { let i = Self::ALL.iter().position(|f| *f == self).unwrap(); Self::ALL[(i + Self::ALL.len() - 1) % Self::ALL.len()] }
+}
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum CalendarMode { Load, Edit } // Load = the calendar grid itself
+
+pub struct CalendarUiState {
+    pub mode: CalendarMode,
+    pub focus: CalendarFocus,
+    pub editing: Calendar_task,
+    pub events: Vec<Calendar_task>,
+    pub cursor_date: NaiveDate,
+    pub view_year: i32,
+    pub view_month: u32,
+    pub date_input: String,
+    pub date_valid: bool,
+    pub color_hex_input: String,
+}
+impl Default for CalendarUiState {
+    fn default() -> Self {
+        let today = chrono::Utc::now().date_naive();
+        Self {
+            mode: CalendarMode::Load,
+            focus: CalendarFocus::Event,
+            editing: Calendar_task::new("".to_string(), None, None, None, chrono::Utc::now(), None),
+            events: Vec::new(),
+            cursor_date: today,
+            view_year: today.year(),
+            view_month: today.month(),
+            date_input: String::new(),
+            date_valid: true,
+            color_hex_input: String::new(),
+        }
+    }
+}
 
 }

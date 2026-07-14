@@ -1046,6 +1046,25 @@ pub fn save_ledger(&self,ledger:&Ledger) -> mysql::Result<()>{
     Ok(())
 }
 
+pub fn save_ledger_txn(&self, x: &Finance_task) -> mysql::Result<()> {
+       let mut conn = self.conn()?;
+       conn.exec_drop("INSERT INTO Ledger(id,item,description,txn_type,amt,frequency,txn_time)
+           VALUES(:id,:item,:description,:txn_type,:amt,:frequency,:txn_time)
+           ON DUPLICATE KEY UPDATE item=VALUES(item), description=VALUES(description),
+               txn_type=VALUES(txn_type), amt=VALUES(amt), frequency=VALUES(frequency), txn_time=VALUES(txn_time)",
+           params! {
+               "id" => x.get_id().to_string(),
+               "item" => x.get_item(),
+               "description" => x.get_desc(),
+               "txn_type" => String::from(x.get_txn_type()),
+               "amt" => x.get_amnt().to_string(),
+               "frequency" => String::from(x.get_freq()),
+               "txn_time" => x.get_txn_time().naive_utc(),
+           })?;
+       Ok(())
+   }
+
+
     pub fn unblock(&self,id:Uuid) ->mysql::Result<()>{
         let mut conn = self.conn()?;
         let mut tx = conn.start_transaction(TxOpts::default())?;

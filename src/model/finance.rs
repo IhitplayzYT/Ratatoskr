@@ -7,7 +7,7 @@ use rust_decimal::Decimal;
 use rust_decimal::prelude::*;
     use crate::model::{meta::Meta::{Frequency, Txn_Type}};
     use uuid::Uuid;
-    #[derive(Debug)]
+    #[derive(Debug,Clone)]
     pub struct Finance_task{
         pub id:Uuid,
         pub item:String,

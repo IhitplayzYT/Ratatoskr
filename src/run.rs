@@ -5,7 +5,7 @@ pub mod Run{
 use ratatui::{Terminal, layout::Alignment, style::Stylize, symbols};
 use std::time::{Instant,Duration};
 
-use crate::{input::{general_input::Input::{escalate_overdue_todos, handle_key, handle_mouse}, pomo_input::Input::tick_pomodoro}, model::{app::App::{App, Color_channel, EditorMode, EditorState, JournalFocus, JournalMode, Page, Pending, PomoFocus, SettingsFocus, Theme_comp, Vim_mode, parse_autosave_duration, parse_fmt_date}, journal::Journal::Journal_task, meta::Meta::{Mood, MyColor, Tag}}, render::{journal_render::Render::render_journal, note_render::Render::render_notes, pomo_render::Render::render_pomodoro, setting_render::Render::render_settings, todo_render::Render::render_todo}};
+use crate::{input::{general_input::Input::{escalate_overdue_todos, handle_key, handle_mouse}, ledger_input::Input::tick_ledger_recurrence, pomo_input::Input::tick_pomodoro}, model::{app::App::{App, Color_channel, EditorMode, EditorState, JournalFocus, JournalMode, Page, Pending, PomoFocus, SettingsFocus, Theme_comp, Vim_mode, parse_autosave_duration, parse_fmt_date}, journal::Journal::Journal_task, meta::Meta::{Mood, MyColor, Tag}}, render::{calendar_render::Render::render_calendar, journal_render::Render::render_journal, ledger_render::Render::render_ledger, note_render::Render::render_notes, pomo_render::Render::render_pomodoro, setting_render::Render::render_settings, todo_render::Render::render_todo}};
  
 use crossterm::event::{
         self, Event, KeyEventKind,
@@ -46,6 +46,7 @@ pub fn run_app<B: ratatui::backend::Backend>(
         }
         tick_pomodoro(app);
         escalate_overdue_todos(app);
+        tick_ledger_recurrence(app);
 
         if app.is_quit {
             return Ok(());
@@ -80,7 +81,7 @@ fn ui(f: &mut Frame, app: &mut App) {
         Page::Journal => render_journal(f, root[1], app),
         Page::Todo => render_todo(f,root[1],app),
         Page::Finance => render_ledger(f,root[1],app),
-        Page::Calendar => render_calender(f,root[1],app),
+        Page::Calendar => render_calendar(f,root[1],app),
         Page::Note => render_notes(f,root[1],app),
         _ => {
             app.last_editor_section = root[1];
