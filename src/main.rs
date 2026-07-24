@@ -87,6 +87,9 @@ fn main() -> anyhow::Result<()> {
     if let Some(x) = clargs.settings{
         app.settings.load(x);
     }
+    if clargs.clear{
+        app.db.clear()?;
+    }
     app.db.init_dbs()?;
     println!("Database Init Completed");
 

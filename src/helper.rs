@@ -16,7 +16,8 @@ pub mod Helper {
         pub user: String,
         pub password: Option<String>,
         pub database:String,
-        pub settings: Option<String>
+        pub settings: Option<String>,
+        pub clear: bool,
     }
 
     impl CLI {
@@ -30,7 +31,8 @@ pub mod Helper {
                 user:"root".to_string(),
                 password: None,
                 settings:None,
-                database:"mydb".to_string()
+                database:"mydb".to_string(),
+                clear: false,
             }
         }
 
@@ -71,6 +73,8 @@ pub mod Helper {
                 } else if i.starts_with("--database=") || i.starts_with("-db="){
                     let idx = i.find("=").unwrap();
                     self.database = i[idx + 1..].to_string();
+                } else if i == "--clear" || i == "-c"{
+                    self.clear = true;
                 }
                  else {
                     Help();

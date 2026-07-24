@@ -164,6 +164,23 @@ tx.query_drop("
     Ok(())
     }
 
+    pub fn clear(&self) -> mysql::Result<()>{
+        let mut conn = self.conn()?;
+        let mut tx = conn.start_transaction(TxOpts::default())?;
+            tx.exec_drop("DROP TABLE Calendar;",())?;
+            tx.exec_drop("DROP TABLE Journal_task_tags;",())?;
+            tx.exec_drop("DROP TABLE Journal_tasks;",())?;
+            tx.exec_drop("DROP TABLE Ledger;",())?;
+            tx.exec_drop("DROP TABLE Note_task_tags;",())?;
+            tx.exec_drop("DROP TABLE Note_tasks;",())?;
+            tx.exec_drop("DROP TABLE Todo_task_tags;",())?;
+            tx.exec_drop("DROP TABLE Todo_tasks;",())?;
+            tx.exec_drop("DROP TABLE tags;",())?;
+        tx.commit()?;
+        Ok(())
+    }
+
+
     pub fn save_all(&self,features:&Feature_set) -> mysql::Result<()>{
         let mut conn = self.conn()?;
         let mut tx = conn.start_transaction(TxOpts::default())?;

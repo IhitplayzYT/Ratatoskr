@@ -8,6 +8,10 @@ pub fn tick_ledger_recurrence(app: &mut App) {
     let now = chrono::Utc::now();
     let due: Vec<Finance_task> = app.ledger_ui.list.retrive_txn().iter()
         .filter_map(|t| {
+            // Skip Once transactions - they should only execute once and not recur
+            if t.freq.period_seconds().is_none() {
+                return None;
+            }
             let period = t.freq.period_seconds()?;
             let elapsed = (now - t.txn_time).num_seconds();
             if elapsed >= period {
