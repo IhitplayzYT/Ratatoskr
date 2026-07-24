@@ -1,6 +1,6 @@
 pub mod Render{
     use chrono::Datelike;
-use ratatui::{Frame, layout::{Alignment, Constraint, Direction, Layout, Rect}, style::{Color, Modifier, Style}, text::{Line, Span}, widgets::{Block, Borders, Paragraph}};
+use ratatui::{Frame, layout::{Alignment, Constraint, Direction, Layout, Rect}, style::{Color, Modifier, Style, Stylize}, text::{Line, Span}, widgets::{Block, Borders, Paragraph}};
 
 use crate::{input::calender_input::Input::{events_on_day, month_grid}, model::app::App::{App, CalendarFocus, CalendarMode}, render::general_render::Render::render_color_swatch};
 
@@ -20,8 +20,8 @@ fn render_calendar_grid(f: &mut Frame, area: Rect, app: &App) {
         .constraints([Constraint::Percentage(70), Constraint::Percentage(30)]).split(area);
 
     let month_name = chrono::NaiveDate::from_ymd_opt(ui.view_year, ui.view_month, 1).unwrap().format("%B %Y").to_string();
-    let block = Block::default().borders(Borders::ALL).border_style(Style::default().fg(color))
-        .title(format!(" {month_name}  (←/→/↑/↓ day, [ ] month, Enter, n = new, q = quit) "));
+    let block = Block::default().borders(Borders::ALL).border_style(Style::default().fg(color)).title(Line::from(vec![
+            Span::styled(format!(" {month_name}  (←/→/↑/↓ day, [ ] month, Enter, n = new, q = quit) "),Style::default().fg(app.settings.theme.fontfg.to_color()))]));
     let inner = block.inner(cols[0]);
     f.render_widget(block, cols[0]);
 
@@ -31,9 +31,8 @@ fn render_calendar_grid(f: &mut Frame, area: Rect, app: &App) {
         .split(inner);
 
     let headers = ["Su","Mo","Tu","We","Th","Fr","Sa"];
-    let header_spans: Vec<Span> = headers.iter().map(|h| Span::styled(format!("{h:^6}"), Style::default().fg(color).add_modifier(Modifier::BOLD))).collect();
+    let header_spans: Vec<Span> = headers.iter().map(|h| Span::styled(format!("{h:^6}"), Style::default().fg(app.settings.theme.accent.to_color()).add_modifier(Modifier::BOLD))).collect();
     f.render_widget(Paragraph::new(Line::from(header_spans)), grid_rows[0]);
-
     let days = month_grid(ui.view_year, ui.view_month);
     for week in 0..6 {
         let mut spans = Vec::with_capacity(7);
@@ -61,13 +60,14 @@ fn render_calendar_day_panel(f: &mut Frame, area: Rect, app: &App) {
     let color = app.settings.theme.primary.to_color();
     let hits = events_on_day(&ui.events, ui.cursor_date);
 
-    let block = Block::default().borders(Borders::ALL).border_style(Style::default().fg(color))
-        .title(format!(" {} ", ui.cursor_date.format("%Y-%m-%d")));
+    let block = Block::default().borders(Borders::ALL).border_style(Style::default().fg(app.settings.theme.secondary.to_color()))
+        .title(
+            Line::from(vec![Span::styled(format!(" {} ", ui.cursor_date.format("%Y-%m-%d")),Style::default().fg(app.settings.theme.fontfg.to_color()))]));
     let inner = block.inner(area);
     f.render_widget(block, area);
 
     if hits.is_empty() {
-        f.render_widget(Paragraph::new("(no events)"), inner);
+        f.render_widget(Paragraph::new("(no events)").fg(app.settings.theme.warning.to_color()), inner);
         return;
     }
 
@@ -90,27 +90,27 @@ fn render_calendar_edit(f: &mut Frame, area: Rect, app: &App) {
             Constraint::Length(3), Constraint::Length(3), Constraint::Length(3), Constraint::Length(3)])
         .split(area);
 
-    render_calendar_field(f, rows[0], "Event", &ui.editing.event, ui.focus == CalendarFocus::Event, color);
-    render_calendar_field(f, rows[1], "Description", ui.editing.desc.as_deref().unwrap_or(""), ui.focus == CalendarFocus::Description, color);
+    render_calendar_field(f, rows[0], "Event", &ui.editing.event, ui.focus == CalendarFocus::Event,app.settings.theme.secondary.to_color(), color);
+    render_calendar_field(f, rows[1], "Description", ui.editing.desc.as_deref().unwrap_or(""), ui.focus == CalendarFocus::Description,app.settings.theme.secondary.to_color(),color);
     render_calendar_picker(f, rows[2], "Duration (←/→ kind, ↑/↓ value)", &ui.editing.duration.title(), ui.focus == CalendarFocus::Duration, color);
     render_calendar_picker(f, rows[3], "Frequency (←/→ kind, ↑/↓ value)", &ui.editing.frequency.title(), ui.focus == CalendarFocus::Frequency, color);
     render_calendar_date_field(f, rows[4], app);
 
     let color_cols = Layout::default().direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(70), Constraint::Percentage(30)]).split(rows[5]);
-    render_calendar_field(f, color_cols[0], "Color (hex RRGGBB)", &ui.color_hex_input, ui.focus == CalendarFocus::ColorHex, color);
+    render_calendar_field(f, color_cols[0], "Color (hex RRGGBB)", &ui.color_hex_input, ui.focus == CalendarFocus::ColorHex, app.settings.theme.secondary.to_color() ,color);
     render_color_swatch(f, color_cols[1], Some(ui.editing.color.clone())); // adjust if MyColor isn't Clone
 
     let btn_cols = Layout::default().direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(34), Constraint::Percentage(33), Constraint::Percentage(33)]).split(rows[6]);
     let btn_color = app.settings.theme.secondary.to_color();
-    render_calendar_button(f, btn_cols[0], "Save", ui.focus == CalendarFocus::Save, btn_color);
-    render_calendar_button(f, btn_cols[1], "New", ui.focus == CalendarFocus::New, btn_color);
-    render_calendar_button(f, btn_cols[2], "Load", ui.focus == CalendarFocus::Load, btn_color);
+    render_calendar_button(f, btn_cols[0], "Save", ui.focus == CalendarFocus::Save,app.settings.theme.secondary.to_color(), btn_color);
+    render_calendar_button(f, btn_cols[1], "New", ui.focus == CalendarFocus::New,app.settings.theme.secondary.to_color(), btn_color);
+    render_calendar_button(f, btn_cols[2], "Load", ui.focus == CalendarFocus::Load,app.settings.theme.secondary.to_color(), btn_color);
 }
 
-fn render_calendar_field(f: &mut Frame, area: Rect, label: &str, value: &str, focused: bool, color: Color) {
-    let style = if focused { Style::default().fg(color).add_modifier(Modifier::BOLD | Modifier::REVERSED) } else { Style::default().fg(color) };
+fn render_calendar_field(f: &mut Frame, area: Rect, label: &str, value: &str, focused: bool, color: Color,color2: Color) {
+    let style = if focused { Style::default().fg(color).add_modifier(Modifier::BOLD | Modifier::REVERSED) } else { Style::default().fg(color2) };
     f.render_widget(Paragraph::new(value).block(Block::default().borders(Borders::ALL).border_style(style).title(label)), area);
 }
 
@@ -130,8 +130,8 @@ fn render_calendar_date_field(f: &mut Frame, area: Rect, app: &App) {
         .block(Block::default().borders(Borders::ALL).border_style(base).title("Date (YYYY-MM-DD HH:MM)")), area);
 }
 
-fn render_calendar_button(f: &mut Frame, area: Rect, label: &str, focused: bool, color: Color) {
-    let style = if focused { Style::default().fg(color).add_modifier(Modifier::BOLD | Modifier::REVERSED) } else { Style::default().fg(color) };
+fn render_calendar_button(f: &mut Frame, area: Rect, label: &str, focused: bool, color: Color,color2: Color) {
+    let style = if focused { Style::default().fg(color).add_modifier(Modifier::BOLD | Modifier::REVERSED) } else { Style::default().fg(color2) };
     let block = Block::default().borders(Borders::ALL).border_style(style);
     f.render_widget(Paragraph::new(Line::from(Span::styled(format!(" {label} "), style))).alignment(Alignment::Center).block(block), area);
 }

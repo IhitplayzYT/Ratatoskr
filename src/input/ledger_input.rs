@@ -2,7 +2,7 @@ pub mod Input{
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use rust_decimal::Decimal;
 
-use crate::model::{app::App::{App, LedgerFocus, LedgerMode}, finance::Finance::{Finance_task, Ledger}, meta::Meta::Txn_Type};
+use crate::{conversion::Conversion::CONVERSION_RATES, model::{app::App::{App, LedgerFocus, LedgerMode}, finance::Finance::{Finance_task, Ledger}, meta::Meta::Txn_Type}};
 
 pub fn tick_ledger_recurrence(app: &mut App) {
     let now = chrono::Utc::now();
@@ -43,6 +43,11 @@ fn handle_ledger_list_key(app: &mut App, key: KeyEvent) {
     if key.code == KeyCode::Char('q') {
         app.is_quit = true;
         app.db.save_all(&app.features).unwrap();
+        return;
+    }
+    if key.code == KeyCode::Char('r') {
+        app.ledger_ui.list.empty();
+        app.ledger_ui.list = app.db.load_ledger().unwrap();
         return;
     }
     if key.code == KeyCode::Char('n') {

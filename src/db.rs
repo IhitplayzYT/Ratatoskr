@@ -1078,7 +1078,7 @@ pub fn save_ledger_txn(&self, x: &Finance_task) -> mysql::Result<()> {
         let mut tx = conn.start_transaction(TxOpts::default())?;
         let ret = Ledger::from_txns(tx.exec_map("
         SELECT * FROM Ledger;
-        ", (), |(id,item,desc,txn_type,amt,freq,txn_time):(String,String,String,String,String,String,NaiveDateTime)|{
+        ", (), |(id,item,desc,amt,txn_type,freq,txn_time):(String,String,String,String,String,String,NaiveDateTime)|{
             let mut k =Finance_task::new(item, Some(desc), Txn_Type::from(txn_type), Decimal::from_str_exact(&amt).unwrap(), Some(Frequency::from_raw_str(&freq)));
             k.txn_time = DateTime::<Utc>::from_naive_utc_and_offset(txn_time,Utc);
             k.set_id(Uuid::from_str(&id).unwrap());

@@ -103,6 +103,13 @@ use rust_decimal::prelude::*;
             self.txns.iter().filter(|x| x.txn_time.ge(&start) && x.txn_time.le(&end)).collect()
         }
 
+        pub fn empty(&mut self){
+            self.txns.clear();
+        }
+        pub fn is_empty(&self) -> bool{
+            self.txns.is_empty()
+        }
+
     }
 
 

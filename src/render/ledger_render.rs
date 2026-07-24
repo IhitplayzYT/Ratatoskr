@@ -4,6 +4,7 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::{Frame, layout::Rect, widgets::{Block, Borders, Paragraph}};
 
+use crate::conversion::Conversion::CONVERSION_RATES;
 use crate::model::app::App::{App, LedgerFocus, LedgerMode};
 use crate::model::meta::Meta::Txn_Type;
 
@@ -21,7 +22,7 @@ fn render_ledger_list(f: &mut Frame, area: Rect, app: &App) {
     let txns = app.ledger_ui.list.retrive_txn();
 
     let outer = Block::default().borders(Borders::ALL).border_style(Style::default().fg(color))
-        .title(format!("Ledger — balance: {} (↑/↓ select, Enter edit, n = new, q = quit)", app.ledger_ui.list.balance()));
+        .title(format!("Ledger — balance: {} (↑/↓ select, Enter edit, n = new,r = reload, q = quit)", app.ledger_ui.list.balance()));
     let inner = outer.inner(area);
     f.render_widget(outer, area);
 
@@ -49,7 +50,7 @@ fn render_ledger_list(f: &mut Frame, area: Rect, app: &App) {
         let sign = match t.txn_type { Txn_Type::CREDIT => "+", Txn_Type::DEBIT => "-", Txn_Type::BLOCKED => "~" };
         let line = Line::from(vec![
             Span::styled(format!(" {:<15} ", title_preview), base),
-            Span::styled(format!("{sign}{} ", t.amnt), base),
+            Span::styled(format!("{sign}{} ", t.amnt * CONVERSION_RATES.try_read().unwrap().get(&app.settings.currency).unwrap()), base),
             Span::styled(format!("[{}]", t.txn_type.title()), base),
         ]);
 
@@ -101,7 +102,7 @@ fn render_ledger_amount_field(f: &mut Frame, area: Rect, app: &App) {
     let base = if focused { Style::default().fg(color).add_modifier(Modifier::BOLD | Modifier::REVERSED) } else { Style::default().fg(color) };
     let style = if !ui.amnt_valid { Style::default().fg(Color::Red) } else { base };
     let text = format!("{}{}", ui.amnt_input, if ui.amnt_valid { "" } else { " — invalid number" });
-    f.render_widget(Paragraph::new(text).style(style).block(Block::default().borders(Borders::ALL).border_style(base).title("Amount")), area);
+    f.render_widget(Paragraph::new(text).style(style).block(Block::default().borders(Borders::ALL).border_style(base).title(format!("Amount in [{}]",app.settings.currency.title()))), area);
 }
 
 fn render_ledger_txn_type_field(f: &mut Frame, area: Rect, app: &App) {

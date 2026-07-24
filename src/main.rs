@@ -9,6 +9,7 @@ mod render;
 mod input;
 
 use helper::Helper;
+use once_cell::sync::Lazy;
 use run::Run;
 use std::{io, time::Instant};
 use std::time::Duration;
@@ -27,14 +28,43 @@ use ratatui::{
 use std::io::stdout;
 
 
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 
 
+    static running:Lazy<Arc<AtomicBool>> = Lazy::new(|| Arc::new(AtomicBool::new(true)));
+    static r: Lazy<Arc<AtomicBool>> = Lazy::new(|| running.clone());
 
+pub fn add_sigint_handler(){
+
+    ctrlc::set_handler(move || {
+        r.store(false, Ordering::SeqCst);
+    }).unwrap();
+}
+
+struct TerminalGuard {
+    terminal: Terminal<CrosstermBackend<std::io::Stdout>>,
+}
+
+impl Drop for TerminalGuard {
+    fn drop(&mut self) {
+        let _ = disable_raw_mode();
+        let _ = execute!(
+            self.terminal.backend_mut(),
+            LeaveAlternateScreen,
+            DisableMouseCapture
+        );
+        let _ = self.terminal.show_cursor();
+    }
+}
 
 use conversion::Conversion;
 
 use crate::model::app::App::{App};
 fn main() -> anyhow::Result<()> {
+    add_sigint_handler();
     let original_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |panic_info| {
         let _ = restore_terminal(); 
@@ -48,7 +78,7 @@ fn main() -> anyhow::Result<()> {
     }
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(Conversion::update_exchange_rates())?;
-
+    
 
 
     
@@ -58,6 +88,7 @@ fn main() -> anyhow::Result<()> {
         app.settings.load(x);
     }
     app.db.init_dbs()?;
+    println!("Database Init Completed");
 
     for i in app.db.load_all_tags()?{
         app.features.tags.insert(i);
@@ -74,20 +105,21 @@ fn main() -> anyhow::Result<()> {
     for i in app.db.get_events()?{
         app.features.calendars.insert(i);
     }
-    app.features.finance = app.db.load_ledger()?;   
-
+    app.features.finance = app.db.load_ledger()?;
+    println!("All data collected");
 
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout,EnterAlternateScreen,EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend)?;
+    let terminal = Terminal::new(backend)?;
+    let mut terminal = TerminalGuard {terminal};
     app.pomo_last_second = Instant::now();
     let tick_rate = Duration::from_millis(100);
-    let ret = Run::run_app(&mut terminal,&mut app,tick_rate);
+    let ret = Run::run_app(&mut terminal.terminal,&mut app,tick_rate);
     disable_raw_mode()?;
-    execute!(terminal.backend_mut(),LeaveAlternateScreen,DisableMouseCapture)?;
-    terminal.show_cursor()?;
+    execute!(&mut &mut terminal.terminal.backend_mut(),LeaveAlternateScreen,DisableMouseCapture)?;
+    terminal.terminal.show_cursor()?;
     if let Err(x) = ret{
         eprintln!("Err: {x}");
     } 

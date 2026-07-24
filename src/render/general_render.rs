@@ -93,7 +93,7 @@ pub fn render_theme_component_list(f: &mut Frame, area: Rect, app: &App) {
     let list = List::new(items).block(
         Block::default()
             .borders(Borders::ALL).border_style(Style::default().fg(app.settings.theme.primary.to_color()))
-            .title(Span::styled("Theme components (↑/↓)",Style::default().fg(app.settings.theme.secondary.to_color()))).title_alignment(Alignment::Center)
+            .title(Span::styled("Theme components ([ / ])",Style::default().fg(app.settings.theme.secondary.to_color()))).title_alignment(Alignment::Center)
     );
     f.render_widget(list, area);
 }
@@ -105,7 +105,7 @@ pub fn render_color_picker(f: &mut Frame, area: Rect, app: &App) {
  
     let block = Block::default()
         .borders(Borders::ALL).border_style(Style::default().fg(color.to_color()))
-        .title(Span::styled(format!(" {} — Use '[' and ']' to change channels, type for editing", picker.component.title()),Style::default().fg(app.settings.theme.primary.to_color())));
+        .title(Span::styled(format!(" {} — Use '←' and '→' to change channels, type for editing", picker.component.title()),Style::default().fg(app.settings.theme.primary.to_color())));
     f.render_widget(block, area);
  
     let inner = Rect {

@@ -11,9 +11,9 @@ use crossterm::event::{
         self, Event, KeyEventKind,
     };
 use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Direction, Layout, Rect,},
     style::{Modifier, Style},
-    text::{Line},
+    text::{Line,Span},
     widgets::{Block, Borders, Paragraph, Tabs},
     Frame,
 };
@@ -99,7 +99,7 @@ fn ui(f: &mut Frame, app: &mut App) {
 fn render_tabs(f: &mut Frame, area: Rect, app: &App) {
     let titles: Vec<Line> = Page::ALL.iter().map(|p| Line::from(p.title())).collect();
     let tabs = Tabs::new(titles)
-        .block(Block::default().borders(Borders::ALL).title("Nav"))
+        .block(Block::default().borders(Borders::ALL).title(Line::from("NavBar").left_aligned()).title(Line::from("Alt+↓=NavDwn Alt+↑=NavUp Tab=Next  Shift+Tab=Prev--").right_aligned())).fg(app.settings.theme.primary.to_color())
         .select(app.page.idx())
         .highlight_style(Style::default().add_modifier(Modifier::BOLD).fg(app.settings.theme.secondary.to_color()));
     f.render_widget(tabs, area);
@@ -112,11 +112,24 @@ fn render_home(f: &mut Frame, area: Rect, app: &App) {
         EditorMode::Normal => "Normal (arrows + mouse)",
         EditorMode::Vim => "Vim",
     };
+    
     let text = vec![
-        Line::from("Welcome back."),
+        Line::from("Welcome back.").alignment(Alignment::Center),
         Line::from(""),
-        Line::from(format!("Editor mode: {mode_str}  (F2 to toggle)")),
-        Line::from("Tab / Shift+Tab to switch pages. q to quit from Home."),
+        Line::from(format!("Editor mode: {mode_str}  (F2 to toggle)")).alignment(Alignment::Center),
+        Line::from(""),
+        Line::from("Tab / Shift+Tab to Switch pages. q to quit from Home.").alignment(Alignment::Center),
+        Line::from("Alt+↓ / Alt+↑ to Navigate inside a page . q to quit from Home.").alignment(Alignment::Center),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled(format!("Total Balance: "),Style::default()),
+            Span::styled(format!("{}",app.ledger_ui.list.balance()),Style::default().fg(ratatui::style::Color::LightGreen)),
+            ]).alignment(Alignment::Center),
+        Line::from(vec![
+            Span::styled(format!("Blocked Amount: "),Style::default()),
+            Span::styled(format!("{}",app.ledger_ui.list.get_blocked()),Style::default().fg(ratatui::style::Color::LightRed)),
+            ]).alignment(Alignment::Center),
+
     ];
     let block = Paragraph::new(text).block(Block::default().borders(Borders::ALL).title("Home"));
     f.render_widget(block, area);
